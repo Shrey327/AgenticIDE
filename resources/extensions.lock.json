@@ -1,0 +1,27 @@
+{
+  "vscode/git": {
+    "version": "1.95.3",
+    "url": "https://open-vsx.org/api/vscode/git/1.95.3/file/vscode.git-1.95.3.vsix",
+    "sha256": "44909b81d3266860f02733c08475ab5fc66c0c1d7259b3c1b164e783559d9291"
+  },
+  "vscode/git-base": {
+    "version": "1.95.3",
+    "url": "https://open-vsx.org/api/vscode/git-base/1.95.3/file/vscode.git-base-1.95.3.vsix",
+    "sha256": "956c41e4e8377a6b113a6a64fcd5308deaad44a827288f6bfcd5cf1c83037483"
+  },
+  "detachhead/basedpyright": {
+    "version": "1.40.2",
+    "url": "https://open-vsx.org/api/detachhead/basedpyright/1.40.2/file/detachhead.basedpyright-1.40.2.vsix",
+    "sha256": "9c87b0b992714ca2f9298cb7e98bda621612f0ee96121a8e77ee7fcccce2f351"
+  },
+  "ms-python/python": {
+    "version": "2026.4.0",
+    "url": "https://open-vsx.org/api/ms-python/python/2026.4.0/file/ms-python.python-2026.4.0.vsix",
+    "sha256": "232aeafb01f069824fdd92d3e628c1c442bbcfa1d3cc945ff97076340bb2b4a6"
+  },
+  "ms-python/debugpy/darwin-arm64": {
+    "version": "2026.6.0",
+    "url": "https://open-vsx.org/api/ms-python/debugpy/darwin-arm64/2026.6.0/file/ms-python.debugpy-2026.6.0@darwin-arm64.vsix",
+    "sha256": "3425b5251b0f0642b569e64397effe72ab141d138abd966b567041baa5609b4b"
+  }
+}

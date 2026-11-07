@@ -1,0 +1,12 @@
+version: 1
+name: langgraph-example
+environment:
+  python: .venv/bin/python
+commands:
+  example: [python, main.py]
+adapters: [langgraph]
+connections: []
+telemetry:
+  captureContent: false
+  retentionDays: 7
+  budgetMb: 2048

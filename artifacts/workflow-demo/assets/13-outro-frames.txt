@@ -1,0 +1,5 @@
+file '13-outro-frame-0.png'
+duration 3.204
+file '13-outro-frame-1.png'
+duration 8.707
+file '13-outro-frame-1.png'

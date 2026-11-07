@@ -1,0 +1,7 @@
+file '12-rag-frame-0.png'
+duration 7.653
+file '12-rag-frame-1.png'
+duration 3.738
+file '12-rag-frame-2.png'
+duration 5.410
+file '12-rag-frame-2.png'

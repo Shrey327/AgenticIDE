@@ -1,0 +1,39 @@
+{
+  "name": "ai-engineering-ide",
+  "version": "0.2.1",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0 <25"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build:core": "node scripts/prepare-assets.mjs && npm run build -w @aiide/core",
+    "build:extension": "npm run build:core && npm run build -w @aiide/theia-extension",
+    "build": "npm run build:extension && npm run build -w @aiide/desktop",
+    "build:browser": "npm run build:extension && npm run build -w @aiide/browser",
+    "start": "npm run start -w @aiide/desktop --",
+    "start:browser": "npm run start -w @aiide/browser --",
+    "test": "npm run test -w @aiide/core && python3 -m unittest discover -s python/tests -v",
+    "typecheck": "npm run build:extension",
+    "collector:install": "node scripts/install-collector.mjs",
+    "package": "npm run build && npm run package -w @aiide/desktop",
+    "extensions:install": "node scripts/install-extensions.mjs",
+    "test:ui": "node scripts/test-ui.mjs",
+    "format": "prettier --write \"packages/*/src/**/*.{ts,tsx}\" \"scripts/*.mjs\"",
+    "check:format": "prettier --check \"packages/*/src/**/*.{ts,tsx}\" \"scripts/*.mjs\"",
+    "demo": "node scripts/start-demo.mjs",
+    "test:runtime": "node scripts/test-runtime.mjs",
+    "test:training": "node scripts/test-training.mjs",
+    "test:wandb": "node scripts/test-wandb.mjs",
+    "test:training:ui": "node scripts/test-training-ui.mjs",
+    "test:agents": "node scripts/test-agent-access.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.30",
+    "prettier": "3.6.2",
+    "typescript": "5.9.3"
+  }
+}

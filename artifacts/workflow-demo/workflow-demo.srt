@@ -1,0 +1,151 @@
+1
+00:00:00,700 --> 00:00:03,201
+AI engineering is more than writing a prompt.
+
+2
+00:00:03,501 --> 00:00:08,635
+You need to run experiments, understand failures, and prove that a change helps.
+
+3
+00:00:08,935 --> 00:00:11,779
+Here is that workflow inside AI Engineering IDE.
+
+4
+00:00:13,579 --> 00:00:18,467
+Start in Overview with an existing Python project, or choose an instrumented template.
+
+5
+00:00:18,767 --> 00:00:23,894
+Python, LangGraph, RAG, and training templates provide a starting point.
+
+6
+00:00:24,194 --> 00:00:29,248
+For this demo, we have prepared a small support-answer project and its local commands.
+
+7
+00:00:31,048 --> 00:00:34,139
+In Runs, select baseline and run it locally.
+
+8
+00:00:34,439 --> 00:00:38,271
+The process completes, but the answer correctness score is zero.
+
+9
+00:00:38,571 --> 00:00:45,895
+This example deliberately uses deterministic retrieval, without a language model, so we can isolate the retrieval mistake.
+
+10
+00:00:47,695 --> 00:00:53,161
+Open the trace to see retrieval, answer composition, and evaluation on one timeline.
+
+11
+00:00:53,461 --> 00:00:55,171
+Select retrieve documents.
+
+12
+00:00:55,471 --> 00:01:03,485
+Its attributes show that the baseline takes the first chunk and returns the models document, rather than the storage document the question needs.
+
+13
+00:01:05,285 --> 00:01:09,439
+Open source jumps directly from the selected span to its Python code.
+
+14
+00:01:09,739 --> 00:01:15,495
+The prepared improvement ranks documents by matching question terms instead of taking the first chunk.
+
+15
+00:01:15,795 --> 00:01:18,765
+The same instrumentation measures both versions.
+
+16
+00:01:20,565 --> 00:01:24,828
+Back in Runs, choose ranked retrieval and launch the improved variant.
+
+17
+00:01:25,128 --> 00:01:29,148
+It finds the storage document, and the correctness score becomes one.
+
+18
+00:01:29,448 --> 00:01:34,722
+Both attempts remain in local history, including their commands and recorded configuration.
+
+19
+00:01:36,522 --> 00:01:41,608
+Select the baseline as a comparison and inspect the recorded metrics and evaluation events.
+
+20
+00:01:41,908 --> 00:01:45,414
+The baseline scores zero; the ranked version scores one.
+
+21
+00:01:45,714 --> 00:01:52,190
+This proves the change for our single demo case. A real release would need a representative evaluation dataset.
+
+22
+00:01:53,990 --> 00:01:58,730
+Attach the run to the coding assistant to carry its evidence into a focused request.
+
+23
+00:01:59,030 --> 00:02:03,560
+With a configured model, you can ask for an explanation or a proposed patch.
+
+24
+00:02:03,860 --> 00:02:10,377
+Autonomous execution additionally requires tested tool support and Docker; changes are reviewed before applying.
+
+25
+00:02:12,177 --> 00:02:18,589
+For model work, switch to Training, select the training command, and enter experiment parameters.
+
+26
+00:02:18,889 --> 00:02:23,349
+Start a small, real PyTorch regression job on the local CPU.
+
+27
+00:02:23,649 --> 00:02:30,009
+The IDE records learning curves, system measurements, and checkpoint references alongside the other runs.
+
+28
+00:02:31,809 --> 00:02:35,342
+Inspect the loss curves, then open the saved checkpoint.
+
+29
+00:02:35,642 --> 00:02:40,903
+Choose it for resume, increase the total step count, and launch the continuation.
+
+30
+00:02:41,203 --> 00:02:47,249
+The resumed run continues from the saved state while the original experiment stays available for comparison.
+
+31
+00:02:49,049 --> 00:02:54,090
+When you are ready to use a model, add a local or HTTPS endpoint in Models.
+
+32
+00:02:54,390 --> 00:02:59,326
+Capability checks distinguish chat, streaming, tools, and embeddings.
+
+33
+00:02:59,626 --> 00:03:04,605
+This recording does not connect a model service or claim a language model quality result.
+
+34
+00:03:06,405 --> 00:03:13,058
+The RAG panel extends this loop to document chunking, ingestion, retrieval, and dataset evaluation.
+
+35
+00:03:13,358 --> 00:03:16,795
+Configure Qdrant and an embedding connection to run that workflow.
+
+36
+00:03:17,095 --> 00:03:21,405
+Retrieved chunks and their provenance help you inspect what an answer was grounded in.
+
+37
+00:03:23,205 --> 00:03:25,409
+The benefit is a shorter engineering loop.
+
+38
+00:03:25,709 --> 00:03:33,316
+Run your code, inspect the evidence, compare the change, and continue training, all from the same local workspace.

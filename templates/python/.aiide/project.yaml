@@ -1,0 +1,12 @@
+version: 1
+name: python-example
+environment:
+  python: .venv/bin/python
+commands:
+  example: [python, main.py]
+adapters: [python]
+connections: []
+telemetry:
+  captureContent: false
+  retentionDays: 7
+  budgetMb: 2048

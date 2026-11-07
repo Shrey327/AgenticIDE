@@ -1,0 +1,12 @@
+version: 1
+name: rag-example
+environment:
+  python: .venv/bin/python
+commands:
+  example: [python, main.py]
+adapters: [langchain]
+connections: []
+telemetry:
+  captureContent: false
+  retentionDays: 7
+  budgetMb: 2048

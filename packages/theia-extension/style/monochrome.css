@@ -1,0 +1,189 @@
+/* Monochrome layer: loaded after workbench.css, re-points its tokens to black and white. */
+.aiide-widget {
+  background: #000;
+}
+.aiide {
+  --aiide-accent: #ffffff;
+  --aiide-accent-ink: #000000;
+  --aiide-warn: #d9b45a;
+  --aiide-danger: #ff6b6b;
+  --aiide-line: #1f1f1f;
+  --aiide-panel: #0a0a0a;
+  --aiide-soft: rgba(255, 255, 255, 0.07);
+  --aiide-radius: 14px;
+  --aiide-muted: #7a7a7a;
+  background: #000;
+  color: #e6e6e6;
+  -webkit-font-smoothing: antialiased;
+}
+.aiide h2,
+.aiide h3 {
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+.aiide h2 {
+  font-weight: 600;
+}
+.aiide p {
+  color: var(--aiide-muted);
+  opacity: 1;
+}
+
+/* Surfaces */
+.aiide-card,
+.aiide-stats > div {
+  background: #0a0a0a;
+  border-color: var(--aiide-line);
+  border-radius: var(--aiide-radius);
+}
+.aiide-card:hover {
+  border-color: #2e2e2e;
+}
+.aiide-stats strong {
+  color: #fff;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+.aiide-json,
+.aiide-chunk,
+.aiide-action,
+.aiide-graph > span,
+.aiide-badge {
+  background: #050505;
+}
+.aiide-table-wrap,
+.aiide-trace-list,
+.aiide-empty {
+  border-radius: var(--aiide-radius);
+}
+.aiide tr:hover td {
+  background: #0d0d0d;
+}
+
+/* Inputs */
+.aiide input,
+.aiide textarea,
+.aiide select {
+  background: #0a0a0a;
+  color: #e6e6e6;
+  border-color: var(--aiide-line);
+  border-radius: 10px;
+  transition: border-color 0.15s;
+}
+.aiide input:focus,
+.aiide textarea:focus,
+.aiide select:focus {
+  border-color: #fff;
+}
+
+/* Buttons: dark pills, white primary */
+.aiide button {
+  background: #0f0f0f;
+  color: #e6e6e6;
+  border-color: #262626;
+  border-radius: 999px;
+  padding-inline: 16px;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+.aiide button:hover {
+  filter: none;
+}
+/* :where keeps this below icon/chip/span button rules so their own hover wins */
+.aiide :where(button):hover {
+  background: #1a1a1a;
+  border-color: #3a3a3a;
+}
+.aiide button.aiide-primary {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+}
+.aiide button.aiide-primary:hover {
+  background: #d9d9d9;
+  border-color: #d9d9d9;
+}
+.aiide button.aiide-subtle,
+.aiide button.aiide-link {
+  background: transparent;
+}
+.aiide button.aiide-link {
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: #555;
+}
+.aiide button.aiide-link:hover {
+  text-decoration-color: #fff;
+}
+
+/* Sidebar nav */
+.aiide .aiide-tabs button {
+  border-radius: 10px;
+  color: #a6a6a6;
+  opacity: 1;
+}
+.aiide .aiide-tabs button:hover {
+  background: #0f0f0f;
+  color: #fff;
+}
+.aiide .aiide-tabs button[aria-current] {
+  background: #161616;
+  color: #fff;
+}
+.aiide-nav-count {
+  background: #fff;
+  color: #000;
+}
+
+/* Status */
+.aiide-badge {
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+.aiide-badge.completed {
+  color: #fff;
+  border-color: #3a3a3a;
+}
+.aiide-badge.failed {
+  color: var(--aiide-danger);
+  border-color: color-mix(in srgb, var(--aiide-danger) 40%, transparent);
+}
+.aiide-badge.running {
+  color: var(--aiide-warn);
+  border-color: color-mix(in srgb, var(--aiide-warn) 40%, transparent);
+}
+.aiide-terminal {
+  background: #050505;
+  color: #d4d4d4;
+  border: 1px solid var(--aiide-line);
+  border-radius: 10px;
+}
+.aiide-diff.before {
+  background: rgba(255, 107, 107, 0.08);
+}
+.aiide-diff.after {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Welcome: big, tight, editorial */
+.aiide-welcome h2 {
+  font-size: 48px;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  font-weight: 600;
+}
+.aiide-welcome > p {
+  font-size: 15px;
+}
+.aiide button.aiide-large {
+  padding: 12px 24px;
+  min-height: 44px;
+}
+
+.aiide ::selection {
+  background: #fff;
+  color: #000;
+}

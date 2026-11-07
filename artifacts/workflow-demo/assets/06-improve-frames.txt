@@ -1,0 +1,7 @@
+file '06-improve-frame-0.png'
+duration 5.263
+file '06-improve-frame-1.png'
+duration 4.320
+file '06-improve-frame-2.png'
+duration 6.374
+file '06-improve-frame-2.png'

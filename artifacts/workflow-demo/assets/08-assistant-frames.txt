@@ -1,0 +1,7 @@
+file '08-assistant-frame-0.png'
+duration 5.740
+file '08-assistant-frame-1.png'
+duration 4.830
+file '08-assistant-frame-2.png'
+duration 7.617
+file '08-assistant-frame-2.png'

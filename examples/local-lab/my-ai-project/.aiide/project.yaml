@@ -1,0 +1,20 @@
+version: 1
+name: my-ai-project
+environment:
+  python: .venv/bin/python
+commands:
+  example:
+    - python
+    - main.py
+  setup:
+    - uv
+    - sync
+    - --locked
+adapters:
+  - python
+connections: []
+services: {}
+telemetry:
+  captureContent: false
+  retentionDays: 7
+  budgetMb: 2048

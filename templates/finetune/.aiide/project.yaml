@@ -1,0 +1,16 @@
+version: 1
+name: finetune-example
+environment:
+  python: .venv/bin/python
+commands:
+  example: [python, main.py]
+adapters: [transformers]
+connections: []
+telemetry:
+  captureContent: false
+  retentionDays: 7
+  budgetMb: 2048
+
+training:
+  framework: transformers
+  resume: true

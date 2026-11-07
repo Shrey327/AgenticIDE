@@ -1,0 +1,12 @@
+version: 1
+name: Local AI Lab
+environment:
+  python: python3
+commands:
+  example: [python, main.py]
+adapters: [python]
+connections: []
+telemetry:
+  captureContent: false
+  retentionDays: 7
+  budgetMb: 2048

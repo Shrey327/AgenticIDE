@@ -1,0 +1,12 @@
+version: 1
+name: pytorch-example
+environment:
+  python: .venv/bin/python
+commands:
+  example: [python, main.py]
+adapters: [pytorch]
+training:
+  framework: pytorch
+  resume: true
+telemetry:
+  captureContent: false

@@ -1,0 +1,7 @@
+file '02-overview-frame-0.png'
+duration 5.888
+file '02-overview-frame-1.png'
+duration 5.427
+file '02-overview-frame-2.png'
+duration 6.154
+file '02-overview-frame-2.png'

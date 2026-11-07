@@ -1,0 +1,58 @@
+{
+  "name": "@aiide/browser",
+  "version": "0.2.1",
+  "private": true,
+  "main": "lib/backend/main.js",
+  "scripts": {
+    "build": "theia build --mode development",
+    "start": "theia start --hostname=127.0.0.1"
+  },
+  "dependencies": {
+    "@theia/core": "1.77.0",
+    "@theia/editor": "1.77.0",
+    "@theia/filesystem": "1.77.0",
+    "@theia/file-search": "1.77.0",
+    "@theia/markers": "1.77.0",
+    "@theia/messages": "1.77.0",
+    "@theia/monaco": "1.77.0",
+    "@theia/navigator": "1.77.0",
+    "@theia/output": "1.77.0",
+    "@theia/preferences": "1.77.0",
+    "@theia/process": "1.77.0",
+    "@theia/terminal": "1.77.0",
+    "@theia/workspace": "1.77.0",
+    "@theia/scm": "1.77.0",
+    "@theia/search-in-workspace": "1.77.0",
+    "@theia/task": "1.77.0",
+    "@theia/debug": "1.77.0",
+    "@theia/plugin-ext": "1.77.0",
+    "@theia/plugin-ext-vscode": "1.77.0",
+    "@theia/vsx-registry": "1.77.0",
+    "@theia/ai-core": "1.77.0",
+    "@theia/ai-chat": "1.77.0",
+    "@theia/ai-chat-ui": "1.77.0",
+    "@theia/ai-openai": "1.77.0",
+    "@theia/ai-ollama": "1.77.0",
+    "@aiide/theia-extension": "0.2.1"
+  },
+  "devDependencies": {
+    "@theia/cli": "1.77.0"
+  },
+  "theia": {
+    "target": "browser",
+    "frontend": {
+      "config": {
+        "applicationName": "AI Engineering IDE",
+        "defaultTheme": "aiide-black",
+        "defaultIconTheme": "theia-file-icons",
+        "preferences": {
+          "files.autoSave": "off",
+          "telemetry.telemetryLevel": "off",
+          "python.experiments.enabled": false,
+          "python.languageServer": "None",
+          "extensions.autoUpdate": false
+        }
+      }
+    }
+  }
+}

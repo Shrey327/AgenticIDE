@@ -1,0 +1,7 @@
+file '10-resume-frame-0.png'
+duration 4.533
+file '10-resume-frame-1.png'
+duration 5.561
+file '10-resume-frame-2.png'
+duration 7.146
+file '10-resume-frame-2.png'

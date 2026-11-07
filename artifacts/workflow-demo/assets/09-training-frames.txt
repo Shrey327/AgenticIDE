@@ -1,0 +1,7 @@
+file '09-training-frame-0.png'
+duration 7.412
+file '09-training-frame-1.png'
+duration 4.759
+file '09-training-frame-2.png'
+duration 7.460
+file '09-training-frame-2.png'

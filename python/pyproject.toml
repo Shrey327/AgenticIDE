@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aiide-sdk"
+version = "0.1.0"
+description = "Local-first telemetry and training adapters for AI Engineering IDE"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+langchain = ["langchain-core>=1,<2"]
+training = ["transformers>=4.45,<6"]
+
+[tool.setuptools.packages.find]
+include = ["aiide_sdk*"]

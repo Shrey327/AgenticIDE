@@ -1,0 +1,7 @@
+file '07-compare-frame-0.png'
+duration 6.086
+file '07-compare-frame-1.png'
+duration 3.806
+file '07-compare-frame-2.png'
+duration 7.576
+file '07-compare-frame-2.png'

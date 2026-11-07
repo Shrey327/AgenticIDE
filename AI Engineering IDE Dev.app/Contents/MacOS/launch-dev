@@ -1,0 +1,6 @@
+#!/bin/zsh
+set -eu
+# shortcut: this launcher uses this checkout and Node installation; update paths if either moves.
+export PATH="/Users/shreyansh/.nvm/versions/node/v24.12.0/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+cd /Users/shreyansh/Documents/AgenticIDE
+exec npm start >> /Users/shreyansh/Documents/AgenticIDE/artifacts/development-app.log 2>&1

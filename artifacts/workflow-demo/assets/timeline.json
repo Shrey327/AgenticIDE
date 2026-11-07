@@ -1,0 +1,437 @@
+[
+  {
+    "id": "01-intro",
+    "section": "THE ENGINEERING LOOP",
+    "title": "From idea\nto evidence.",
+    "benefit": "An AI engineer\u2019s workflow in one local workspace.",
+    "tag": "LOCAL-FIRST \u00b7 DEVELOPER PREVIEW 0.2",
+    "lines": [
+      "AI engineering is more than writing a prompt.",
+      "You need to run experiments, understand failures, and prove that a change helps.",
+      "Here is that workflow inside AI Engineering IDE."
+    ],
+    "start": 0.0,
+    "duration": 12.879,
+    "captions": [
+      {
+        "text": "AI engineering is more than writing a prompt.",
+        "start": 0.7,
+        "end": 3.20059,
+        "file": "01-intro-0.aiff"
+      },
+      {
+        "text": "You need to run experiments, understand failures, and prove that a change helps.",
+        "start": 3.50059,
+        "end": 8.634604,
+        "file": "01-intro-1.aiff"
+      },
+      {
+        "text": "Here is that workflow inside AI Engineering IDE.",
+        "start": 8.934604,
+        "end": 11.778776,
+        "file": "01-intro-2.aiff"
+      }
+    ]
+  },
+  {
+    "id": "02-overview",
+    "section": "01 / OPEN YOUR WORKSPACE",
+    "title": "Start with\nthe wiring.",
+    "benefit": "Templates, project commands, and local history share one workspace.",
+    "tag": "REAL IDE \u00b7 ISOLATED DEMO PROJECT",
+    "lines": [
+      "Start in Overview with an existing Python project, or choose an instrumented template.",
+      "Python, LangGraph, RAG, and training templates provide a starting point.",
+      "For this demo, we have prepared a small support-answer project and its local commands."
+    ],
+    "start": 12.879,
+    "duration": 17.469,
+    "captions": [
+      {
+        "text": "Start in Overview with an existing Python project, or choose an instrumented template.",
+        "start": 0.7,
+        "end": 5.58839,
+        "file": "02-overview-0.aiff"
+      },
+      {
+        "text": "Python, LangGraph, RAG, and training templates provide a starting point.",
+        "start": 5.88839,
+        "end": 11.014966000000001,
+        "file": "02-overview-1.aiff"
+      },
+      {
+        "text": "For this demo, we have prepared a small support-answer project and its local commands.",
+        "start": 11.314966,
+        "end": 16.36907,
+        "file": "02-overview-2.aiff"
+      }
+    ]
+  },
+  {
+    "id": "03-baseline",
+    "section": "02 / ESTABLISH A BASELINE",
+    "title": "Run it.\nMeasure it.",
+    "benefit": "A completed process can still produce a wrong answer.",
+    "tag": "REAL EXECUTION \u00b7 DETERMINISTIC RETRIEVAL EXAMPLE",
+    "lines": [
+      "In Runs, select baseline and run it locally.",
+      "The process completes, but the answer correctness score is zero.",
+      "This example deliberately uses deterministic retrieval, without a language model, so we can isolate the retrieval mistake."
+    ],
+    "start": 30.348,
+    "duration": 16.647,
+    "captions": [
+      {
+        "text": "In Runs, select baseline and run it locally.",
+        "start": 0.7,
+        "end": 3.791429,
+        "file": "03-baseline-0.aiff"
+      },
+      {
+        "text": "The process completes, but the answer correctness score is zero.",
+        "start": 4.091429,
+        "end": 7.922993999999999,
+        "file": "03-baseline-1.aiff"
+      },
+      {
+        "text": "This example deliberately uses deterministic retrieval, without a language model, so we can isolate the retrieval mistake.",
+        "start": 8.222994,
+        "end": 15.546531,
+        "file": "03-baseline-2.aiff"
+      }
+    ]
+  },
+  {
+    "id": "04-trace",
+    "section": "03 / DIAGNOSE THE RESULT",
+    "title": "Find the\nwrong step.",
+    "benefit": "Nested spans connect an outcome to the operation that caused it.",
+    "tag": "PYTHON \u2192 COLLECTOR \u2192 LOCAL TRACE STORE",
+    "lines": [
+      "Open the trace to see retrieval, answer composition, and evaluation on one timeline.",
+      "Select retrieve documents.",
+      "Its attributes show that the baseline takes the first chunk and returns the models document, rather than the storage document the question needs."
+    ],
+    "start": 46.995,
+    "duration": 17.59,
+    "captions": [
+      {
+        "text": "Open the trace to see retrieval, answer composition, and evaluation on one timeline.",
+        "start": 0.7,
+        "end": 6.1660770000000005,
+        "file": "04-trace-0.aiff"
+      },
+      {
+        "text": "Select retrieve documents.",
+        "start": 6.466077,
+        "end": 8.175692,
+        "file": "04-trace-1.aiff"
+      },
+      {
+        "text": "Its attributes show that the baseline takes the first chunk and returns the models document, rather than the storage document the question needs.",
+        "start": 8.475692,
+        "end": 16.489751,
+        "file": "04-trace-2.aiff"
+      }
+    ]
+  },
+  {
+    "id": "05-source",
+    "section": "04 / MOVE FROM TRACE TO CODE",
+    "title": "Keep the\ncontext.",
+    "benefit": "Jump from a recorded span to the Python that produced it.",
+    "tag": "REAL SOURCE NAVIGATION",
+    "lines": [
+      "Open source jumps directly from the selected span to its Python code.",
+      "The prepared improvement ranks documents by matching question terms instead of taking the first chunk.",
+      "The same instrumentation measures both versions."
+    ],
+    "start": 64.585,
+    "duration": 15.28,
+    "captions": [
+      {
+        "text": "Open source jumps directly from the selected span to its Python code.",
+        "start": 0.7,
+        "end": 4.85415,
+        "file": "05-source-0.aiff"
+      },
+      {
+        "text": "The prepared improvement ranks documents by matching question terms instead of taking the first chunk.",
+        "start": 5.15415,
+        "end": 10.910477,
+        "file": "05-source-1.aiff"
+      },
+      {
+        "text": "The same instrumentation measures both versions.",
+        "start": 11.210477,
+        "end": 14.180228,
+        "file": "05-source-2.aiff"
+      }
+    ]
+  },
+  {
+    "id": "06-improve",
+    "section": "05 / TEST THE IMPROVEMENT",
+    "title": "Change one\nthing.",
+    "benefit": "Run the ranked retrieval variant against the same question.",
+    "tag": "SAME DEMO CASE \u00b7 NEW RETRIEVAL STRATEGY",
+    "lines": [
+      "Back in Runs, choose ranked retrieval and launch the improved variant.",
+      "It finds the storage document, and the correctness score becomes one.",
+      "Both attempts remain in local history, including their commands and recorded configuration."
+    ],
+    "start": 79.865,
+    "duration": 15.957,
+    "captions": [
+      {
+        "text": "Back in Runs, choose ranked retrieval and launch the improved variant.",
+        "start": 0.7,
+        "end": 4.963129,
+        "file": "06-improve-0.aiff"
+      },
+      {
+        "text": "It finds the storage document, and the correctness score becomes one.",
+        "start": 5.263129,
+        "end": 9.283356000000001,
+        "file": "06-improve-1.aiff"
+      },
+      {
+        "text": "Both attempts remain in local history, including their commands and recorded configuration.",
+        "start": 9.583356,
+        "end": 14.856644,
+        "file": "06-improve-2.aiff"
+      }
+    ]
+  },
+  {
+    "id": "07-compare",
+    "section": "06 / CHECK THE EVIDENCE",
+    "title": "Compare\nbefore deciding.",
+    "benefit": "Keep the baseline and improved result side by side.",
+    "tag": "ONE DEMO CASE \u00b7 NOT A MODEL BENCHMARK",
+    "lines": [
+      "Select the baseline as a comparison and inspect the recorded metrics and evaluation events.",
+      "The baseline scores zero; the ranked version scores one.",
+      "This proves the change for our single demo case. A real release would need a representative evaluation dataset."
+    ],
+    "start": 95.822,
+    "duration": 17.468,
+    "captions": [
+      {
+        "text": "Select the baseline as a comparison and inspect the recorded metrics and evaluation events.",
+        "start": 0.7,
+        "end": 5.7860320000000005,
+        "file": "07-compare-0.aiff"
+      },
+      {
+        "text": "The baseline scores zero; the ranked version scores one.",
+        "start": 6.086032,
+        "end": 9.592245,
+        "file": "07-compare-1.aiff"
+      },
+      {
+        "text": "This proves the change for our single demo case. A real release would need a representative evaluation dataset.",
+        "start": 9.892244999999999,
+        "end": 16.368389999999998,
+        "file": "07-compare-2.aiff"
+      }
+    ]
+  },
+  {
+    "id": "08-assistant",
+    "section": "07 / HAND OFF USEFUL CONTEXT",
+    "title": "Bring evidence\nto the assistant.",
+    "benefit": "Attach the run instead of copying logs between tools.",
+    "tag": "CONTEXT HANDOFF \u00b7 MODEL REQUEST NOT SENT",
+    "lines": [
+      "Attach the run to the coding assistant to carry its evidence into a focused request.",
+      "With a configured model, you can ask for an explanation or a proposed patch.",
+      "Autonomous execution additionally requires tested tool support and Docker; changes are reviewed before applying."
+    ],
+    "start": 113.29,
+    "duration": 18.187,
+    "captions": [
+      {
+        "text": "Attach the run to the coding assistant to carry its evidence into a focused request.",
+        "start": 0.7,
+        "end": 5.440091,
+        "file": "08-assistant-0.aiff"
+      },
+      {
+        "text": "With a configured model, you can ask for an explanation or a proposed patch.",
+        "start": 5.740091,
+        "end": 10.270204,
+        "file": "08-assistant-1.aiff"
+      },
+      {
+        "text": "Autonomous execution additionally requires tested tool support and Docker; changes are reviewed before applying.",
+        "start": 10.570204,
+        "end": 17.086576,
+        "file": "08-assistant-2.aiff"
+      }
+    ]
+  },
+  {
+    "id": "09-training",
+    "section": "08 / LAUNCH A TRAINING JOB",
+    "title": "Train in\nthe same loop.",
+    "benefit": "Parameters, job status, and learning curves stay connected.",
+    "tag": "REAL PYTORCH \u00b7 LOCAL CPU EXECUTION",
+    "lines": [
+      "For model work, switch to Training, select the training command, and enter experiment parameters.",
+      "Start a small, real PyTorch regression job on the local CPU.",
+      "The IDE records learning curves, system measurements, and checkpoint references alongside the other runs."
+    ],
+    "start": 131.477,
+    "duration": 19.632,
+    "captions": [
+      {
+        "text": "For model work, switch to Training, select the training command, and enter experiment parameters.",
+        "start": 0.7,
+        "end": 7.112472,
+        "file": "09-training-0.aiff"
+      },
+      {
+        "text": "Start a small, real PyTorch regression job on the local CPU.",
+        "start": 7.412472,
+        "end": 11.871565,
+        "file": "09-training-1.aiff"
+      },
+      {
+        "text": "The IDE records learning curves, system measurements, and checkpoint references alongside the other runs.",
+        "start": 12.171565000000001,
+        "end": 18.531746000000002,
+        "file": "09-training-2.aiff"
+      }
+    ]
+  },
+  {
+    "id": "10-resume",
+    "section": "09 / INSPECT AND CONTINUE",
+    "title": "Resume with\na checkpoint.",
+    "benefit": "Inspect the saved state and continue training without losing history.",
+    "tag": "REAL CHECKPOINT INSPECTION AND RESUME",
+    "lines": [
+      "Inspect the loss curves, then open the saved checkpoint.",
+      "Choose it for resume, increase the total step count, and launch the continuation.",
+      "The resumed run continues from the saved state while the original experiment stays available for comparison."
+    ],
+    "start": 151.109,
+    "duration": 17.24,
+    "captions": [
+      {
+        "text": "Inspect the loss curves, then open the saved checkpoint.",
+        "start": 0.7,
+        "end": 4.232608,
+        "file": "10-resume-0.aiff"
+      },
+      {
+        "text": "Choose it for resume, increase the total step count, and launch the continuation.",
+        "start": 4.532608,
+        "end": 9.793787,
+        "file": "10-resume-1.aiff"
+      },
+      {
+        "text": "The resumed run continues from the saved state while the original experiment stays available for comparison.",
+        "start": 10.093786999999999,
+        "end": 16.140136,
+        "file": "10-resume-2.aiff"
+      }
+    ]
+  },
+  {
+    "id": "11-models",
+    "section": "10 / CONNECT YOUR MODELS",
+    "title": "Choose your\nmodel endpoint.",
+    "benefit": "Chat, streaming, tool calls, and embeddings are tested separately.",
+    "tag": "CONFIGURATION TOUR \u00b7 NO MODEL CONNECTED",
+    "lines": [
+      "When you are ready to use a model, add a local or HTTPS endpoint in Models.",
+      "Capability checks distinguish chat, streaming, tools, and embeddings.",
+      "This recording does not connect a model service or claim a language model quality result."
+    ],
+    "start": 168.34900000000002,
+    "duration": 17.356,
+    "captions": [
+      {
+        "text": "When you are ready to use a model, add a local or HTTPS endpoint in Models.",
+        "start": 0.7,
+        "end": 5.740862,
+        "file": "11-models-0.aiff"
+      },
+      {
+        "text": "Capability checks distinguish chat, streaming, tools, and embeddings.",
+        "start": 6.040862,
+        "end": 10.977279,
+        "file": "11-models-1.aiff"
+      },
+      {
+        "text": "This recording does not connect a model service or claim a language model quality result.",
+        "start": 11.277279,
+        "end": 16.255737,
+        "file": "11-models-2.aiff"
+      }
+    ]
+  },
+  {
+    "id": "12-rag",
+    "section": "11 / EXTEND TO A RAG WORKFLOW",
+    "title": "Inspect the\nretrieved context.",
+    "benefit": "Preview chunks, ingest documents, retrieve, and evaluate from one panel.",
+    "tag": "CONFIGURATION TOUR \u00b7 QDRANT AND EMBEDDINGS REQUIRED",
+    "lines": [
+      "The RAG panel extends this loop to document chunking, ingestion, retrieval, and dataset evaluation.",
+      "Configure Qdrant and an embedding connection to run that workflow.",
+      "Retrieved chunks and their provenance help you inspect what an answer was grounded in."
+    ],
+    "start": 185.705,
+    "duration": 16.8,
+    "captions": [
+      {
+        "text": "The RAG panel extends this loop to document chunking, ingestion, retrieval, and dataset evaluation.",
+        "start": 0.7,
+        "end": 7.352517,
+        "file": "12-rag-0.aiff"
+      },
+      {
+        "text": "Configure Qdrant and an embedding connection to run that workflow.",
+        "start": 7.652517,
+        "end": 11.090112999999999,
+        "file": "12-rag-1.aiff"
+      },
+      {
+        "text": "Retrieved chunks and their provenance help you inspect what an answer was grounded in.",
+        "start": 11.390113,
+        "end": 15.700271999999998,
+        "file": "12-rag-2.aiff"
+      }
+    ]
+  },
+  {
+    "id": "13-outro",
+    "section": "BUILD \u2192 OBSERVE \u2192 IMPROVE",
+    "title": "Less switching.\nMore evidence.",
+    "benefit": "Code \u00b7 Runs \u00b7 Traces \u00b7 Evaluations \u00b7 Training",
+    "tag": "AI ENGINEERING IDE \u00b7 PREVIEW 0.2",
+    "lines": [
+      "The benefit is a shorter engineering loop.",
+      "Run your code, inspect the evidence, compare the change, and continue training, all from the same local workspace."
+    ],
+    "start": 202.50500000000002,
+    "duration": 11.911,
+    "captions": [
+      {
+        "text": "The benefit is a shorter engineering loop.",
+        "start": 0.7,
+        "end": 2.9036730000000004,
+        "file": "13-outro-0.aiff"
+      },
+      {
+        "text": "Run your code, inspect the evidence, compare the change, and continue training, all from the same local workspace.",
+        "start": 3.203673,
+        "end": 10.810929,
+        "file": "13-outro-1.aiff"
+      }
+    ]
+  }
+]

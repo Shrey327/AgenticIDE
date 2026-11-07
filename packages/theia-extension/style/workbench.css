@@ -1,0 +1,1132 @@
+.aiide-widget {
+  overflow: auto;
+  background: var(--theia-editor-background);
+}
+.aiide {
+  --aiide-accent: #66d5bb;
+  --aiide-accent-ink: #0d2a22;
+  --aiide-warn: #e8cb80;
+  --aiide-danger: #f29a8b;
+  --aiide-line: var(--theia-widget-border, #30373a);
+  --aiide-panel: var(--theia-sideBar-background);
+  --aiide-soft: color-mix(in srgb, var(--aiide-accent) 10%, transparent);
+  --aiide-radius: 10px;
+  font-family: var(--theia-ui-font-family);
+  color: var(--theia-editor-foreground);
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+.aiide * {
+  box-sizing: border-box;
+}
+.aiide-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--aiide-accent);
+  margin-right: 4px;
+}
+.aiide h2 {
+  font-size: 22px;
+  letter-spacing: -0.5px;
+  font-weight: 500;
+  margin: 0 0 9px;
+}
+.aiide h3 {
+  font-size: 15px;
+  font-weight: 500;
+  margin: 0 0 12px;
+}
+.aiide h4 {
+  font-size: 12px;
+  margin: 20px 0 10px;
+}
+.aiide p {
+  line-height: 1.6;
+  font-size: 12px;
+  opacity: 0.72;
+}
+.aiide-card {
+  padding: 20px;
+  border: 1px solid var(--aiide-line);
+  border-radius: var(--aiide-radius);
+  background: var(--aiide-panel);
+  min-width: 0;
+  margin-bottom: 16px;
+}
+.aiide-card .aiide-eyebrow {
+  display: block;
+  margin-bottom: 17px;
+}
+.aiide-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.aiide-columns.wide-left {
+  grid-template-columns: 1.5fr 1fr;
+}
+.aiide-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.aiide-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+.aiide label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 11px;
+  margin-bottom: 15px;
+  line-height: 1.5;
+}
+.aiide input,
+.aiide textarea,
+.aiide select {
+  font: inherit;
+  font-size: 12px;
+  border: 1px solid var(--aiide-line);
+  border-radius: 5px;
+  background: var(--theia-input-background);
+  color: var(--theia-input-foreground);
+  padding: 9px 11px;
+  width: 100%;
+  min-height: 34px;
+  outline: none;
+}
+.aiide input:focus,
+.aiide textarea:focus,
+.aiide select:focus {
+  border-color: var(--aiide-accent);
+}
+.aiide textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+.aiide button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font: inherit;
+  font-size: 11px;
+  border: 1px solid var(--aiide-line);
+  border-radius: 5px;
+  background: var(--theia-button-secondaryBackground, #303638);
+  color: var(--theia-button-secondaryForeground, #ddd);
+  padding: 8px 12px;
+  cursor: pointer;
+  min-height: 32px;
+}
+.aiide button:hover {
+  filter: brightness(1.15);
+}
+.aiide button:focus-visible {
+  outline: 2px solid var(--aiide-accent);
+  outline-offset: 2px;
+}
+.aiide button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.aiide button.aiide-primary {
+  background: var(--aiide-accent);
+  color: #102a23;
+  border-color: var(--aiide-accent);
+  font-weight: 600;
+}
+.aiide button.aiide-subtle {
+  background: transparent;
+}
+.aiide button.aiide-link {
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--aiide-accent);
+  text-align: left;
+}
+.aiide-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 15px 0;
+}
+.aiide-toolbar label {
+  margin: 0;
+  min-width: 150px;
+  flex: 1;
+}
+.aiide-toolbar button {
+  align-self: end;
+}
+.aiide-toolbar > span {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-right: auto;
+}
+.aiide .aiide-checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+.aiide-checkbox input {
+  width: 15px;
+  min-height: 15px;
+  accent-color: var(--aiide-accent);
+}
+.aiide-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 26px;
+}
+.aiide-stats > div {
+  border: 1px solid var(--aiide-line);
+  border-radius: 8px;
+  padding: 18px;
+}
+.aiide-stats small {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 1px;
+  opacity: 0.55;
+}
+.aiide-stats strong {
+  display: block;
+  font-size: 30px;
+  font-weight: 400;
+  margin-top: 12px;
+}
+.aiide-stats .aiide-stat-text {
+  font-size: 16px;
+  margin-top: 20px;
+}
+.aiide dl {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  font-size: 11px;
+  gap: 15px;
+  margin: 24px 0;
+}
+.aiide dt {
+  opacity: 0.5;
+}
+.aiide dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.aiide-empty {
+  padding: 55px 20px;
+  text-align: center;
+  border: 1px dashed var(--aiide-line);
+  border-radius: 8px;
+  margin: 20px 0;
+}
+.aiide-empty i {
+  font-size: 26px;
+  color: var(--aiide-accent);
+  opacity: 0.6;
+}
+.aiide-empty p {
+  max-width: 420px;
+  margin: 15px auto;
+}
+.aiide-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--aiide-line);
+  border-radius: 8px;
+}
+.aiide table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 11px;
+}
+.aiide th {
+  text-align: left;
+  font-weight: 400;
+  opacity: 0.6;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.aiide td,
+.aiide th {
+  padding: 12px;
+  border-bottom: 1px solid var(--aiide-line);
+}
+.aiide tr:last-child td {
+  border: 0;
+}
+.aiide tr.selected,
+.aiide-span.selected {
+  background: color-mix(in srgb, var(--aiide-accent) 9%, transparent);
+}
+.aiide-badge {
+  display: inline-flex;
+  font-size: 10px;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: var(--theia-editor-background);
+  border: 1px solid var(--aiide-line);
+  color: inherit;
+}
+.aiide-badge.completed {
+  color: var(--aiide-accent);
+}
+.aiide-badge.failed {
+  color: #f29a8b;
+}
+.aiide-badge.running {
+  color: #e8cb80;
+}
+.aiide pre {
+  font-family: var(--theia-code-font-family);
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.7;
+}
+.aiide-json {
+  max-height: 350px;
+  overflow: auto;
+  background: var(--theia-editor-background);
+  padding: 13px;
+  border-radius: 5px;
+}
+.aiide details {
+  margin: 15px 0;
+}
+.aiide summary {
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0.8;
+}
+.aiide-event {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--aiide-line);
+}
+.aiide-event small {
+  font-size: 10px;
+  color: var(--aiide-accent);
+}
+.aiide-event pre {
+  max-height: 180px;
+  overflow: auto;
+  margin-bottom: 0;
+}
+.aiide-mono {
+  font-family: var(--theia-code-font-family);
+  overflow-wrap: anywhere;
+}
+.aiide p.aiide-note {
+  font-size: 10px;
+  opacity: 0.5;
+  margin-top: 15px;
+}
+.aiide-trace-list {
+  border: 1px solid var(--aiide-line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.aiide button.aiide-span {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--aiide-line);
+  border-radius: 0;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 55px;
+  background: transparent;
+  text-align: left;
+  padding: 12px 14px;
+  color: inherit;
+}
+.aiide-span > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.aiide-span small {
+  font-size: 9px;
+  opacity: 0.6;
+  text-align: right;
+}
+.aiide-span i {
+  color: var(--aiide-accent);
+  font-size: 12px;
+}
+.aiide-waterfall {
+  height: 12px;
+  background: color-mix(in srgb, var(--aiide-accent) 5%, transparent);
+  border-radius: 2px;
+  display: flex;
+}
+.aiide-waterfall > span {
+  height: 6px;
+  margin-top: 3px;
+  border-radius: 2px;
+  background: var(--aiide-accent);
+  opacity: 0.8;
+}
+.aiide-graph {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.aiide-graph > span {
+  padding: 10px;
+  background: var(--theia-editor-background);
+  border-radius: 5px;
+}
+.aiide-graph small {
+  color: var(--aiide-accent);
+  margin-left: 10px;
+}
+.aiide-capabilities {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  font-size: 10px;
+  margin: 20px 0;
+}
+.aiide-capabilities span {
+  opacity: 0.4;
+}
+.aiide-capabilities .supported {
+  color: var(--aiide-accent);
+  opacity: 1;
+}
+.aiide-chunk {
+  border-left: 2px solid var(--aiide-accent);
+  padding: 12px 14px;
+  background: var(--theia-editor-background);
+  margin: 12px 0;
+  font-size: 11px;
+}
+.aiide-chunk small {
+  opacity: 0.5;
+}
+.aiide-answer {
+  white-space: pre-wrap;
+}
+.aiide-response {
+  border-top: 1px solid var(--aiide-line);
+  padding-top: 20px;
+  margin-top: 20px;
+}
+.aiide-action {
+  font-size: 10px;
+  padding: 8px;
+  background: var(--theia-editor-background);
+  margin-top: 5px;
+  display: flex;
+  justify-content: space-between;
+}
+.aiide-action span {
+  opacity: 0.5;
+}
+.aiide-terminal {
+  background: #101415;
+  color: #c9ddd5;
+  padding: 15px;
+  max-height: 350px;
+  overflow: auto;
+}
+.aiide-diff {
+  padding: 12px;
+  max-height: 400px;
+  overflow: auto;
+  border-radius: 4px;
+}
+.aiide-diff.before {
+  background: #572d2d33;
+}
+.aiide-diff.after {
+  background: #2a614333;
+}
+.aiide-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+}
+.aiide-metric-grid small {
+  font-size: 10px;
+  opacity: 0.5;
+}
+.aiide-metric-grid h3 {
+  font-size: 25px;
+  margin: 12px 0;
+}
+
+/* ---------- App shell ---------- */
+.aiide-loading {
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  opacity: 0.6;
+  height: 100%;
+}
+.aiide.aiide-app {
+  flex-direction: row;
+  height: 100%;
+  min-height: 0;
+}
+.aiide-sidebar {
+  width: 224px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--aiide-line);
+  background: var(--aiide-panel);
+  overflow-y: auto;
+}
+.aiide-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 16px 16px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+.aiide-brand i {
+  color: var(--aiide-accent);
+  font-size: 16px;
+}
+.aiide-project-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 4px 10px 12px;
+  padding: 9px 6px 9px 10px;
+  border: 1px solid var(--aiide-line);
+  border-radius: 8px;
+  background: var(--theia-editor-background);
+  min-width: 0;
+}
+.aiide-project-chip > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.aiide-project-chip strong {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.aiide-project-chip small {
+  font-size: 10px;
+  opacity: 0.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.aiide button.aiide-icon-button {
+  background: transparent;
+  border-color: transparent;
+  padding: 4px 6px;
+  min-height: 26px;
+  flex-shrink: 0;
+}
+.aiide-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 8px;
+  flex: 1;
+}
+.aiide-nav-group {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  opacity: 0.45;
+  padding: 14px 10px 6px;
+}
+.aiide-nav-spacer {
+  flex: 1;
+  min-height: 14px;
+}
+.aiide .aiide-tabs button {
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  padding: 7px 10px;
+  min-height: 32px;
+  font-size: 12px;
+  opacity: 0.78;
+  text-align: left;
+}
+.aiide .aiide-tabs button:hover {
+  filter: none;
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+.aiide .aiide-tabs button i {
+  font-size: 15px;
+  width: 16px;
+}
+.aiide .aiide-tabs button[aria-current] {
+  opacity: 1;
+  background: var(--aiide-soft);
+  color: var(--aiide-accent);
+  font-weight: 600;
+}
+.aiide-nav-label {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.aiide-nav-count {
+  font-size: 10px;
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 9px;
+  background: var(--aiide-warn);
+  color: #2b2410;
+  font-weight: 700;
+  text-align: center;
+}
+.aiide-sidebar-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px 14px;
+  margin-top: 8px;
+  border-top: 1px solid var(--aiide-line);
+  font-size: 10px;
+  opacity: 0.6;
+  white-space: normal;
+  flex: none;
+}
+.aiide-dot.warn {
+  background: var(--aiide-warn);
+}
+.aiide-dot.error {
+  background: var(--aiide-danger);
+}
+.aiide-dot.idle {
+  background: currentColor;
+  opacity: 0.35;
+}
+.aiide-content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.aiide-main {
+  padding: 28px 32px 40px;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.aiide-eyebrow {
+  font-size: 9px;
+  letter-spacing: 1.8px;
+  color: var(--aiide-accent);
+  font-weight: 600;
+}
+.aiide-section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.aiide-section-title p {
+  margin: 0;
+  max-width: 640px;
+}
+.aiide-section-actions {
+  display: flex;
+  gap: 8px;
+}
+.aiide-muted {
+  opacity: 0.55;
+}
+.aiide code {
+  font-family: var(--theia-code-font-family);
+  font-size: 0.95em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+.aiide-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 32px 0;
+  padding: 11px 14px;
+  background: color-mix(in srgb, var(--aiide-danger) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--aiide-danger) 60%, transparent);
+  border-radius: 8px;
+  font-size: 12px;
+}
+.aiide-error > span {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.aiide-error i {
+  color: var(--aiide-danger);
+}
+.aiide .aiide-error button {
+  background: transparent;
+  border: 0;
+  padding: 0 4px;
+  font-size: 18px;
+  min-height: 0;
+}
+
+/* ---------- Pills, chips ---------- */
+.aiide-stat-pills,
+.aiide-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.aiide .aiide-pill {
+  border-radius: 999px;
+  background: var(--aiide-panel);
+  padding: 5px 12px;
+  min-height: 28px;
+  gap: 6px;
+}
+.aiide-pill strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.aiide-chips {
+  margin: 0 0 16px;
+}
+.aiide .aiide-chips button,
+.aiide-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 4px 11px;
+  min-height: 26px;
+  font-size: 11px;
+  border: 1px solid var(--aiide-line);
+  background: transparent;
+  text-transform: none;
+}
+.aiide-chip {
+  font-family: var(--theia-code-font-family);
+}
+.aiide .aiide-chips button small {
+  opacity: 0.55;
+}
+.aiide .aiide-chips button[aria-pressed='true'] {
+  border-color: var(--aiide-accent);
+  background: var(--aiide-soft);
+  color: var(--aiide-accent);
+}
+
+/* ---------- Home ---------- */
+.aiide-workflows {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.aiide-workflow {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  transition: border-color 0.15s;
+}
+.aiide-workflow:hover {
+  border-color: color-mix(in srgb, var(--aiide-accent) 50%, var(--aiide-line));
+}
+.aiide-workflow-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.aiide-workflow-head > i {
+  font-size: 18px;
+  color: var(--aiide-accent);
+  background: var(--aiide-soft);
+  padding: 8px;
+  border-radius: 8px;
+}
+.aiide-workflow-head h3 {
+  margin: 2px 0 4px;
+}
+.aiide-workflow-head p {
+  margin: 0;
+  font-size: 11px;
+}
+.aiide-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  margin: 16px 0 12px;
+  overflow: hidden;
+}
+.aiide-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--aiide-accent);
+  transition: width 0.3s;
+}
+.aiide-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 1;
+}
+.aiide-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.aiide-steps li i {
+  font-size: 14px;
+  opacity: 0.4;
+}
+.aiide-steps li.done i {
+  color: var(--aiide-accent);
+  opacity: 1;
+}
+.aiide .aiide-steps button.aiide-link {
+  color: inherit;
+  font-size: 12px;
+  min-height: 0;
+  text-align: left;
+}
+.aiide .aiide-steps li.done button.aiide-link {
+  opacity: 0.55;
+}
+.aiide .aiide-steps button.aiide-link:hover {
+  color: var(--aiide-accent);
+  filter: none;
+}
+.aiide-workflow-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--aiide-line);
+}
+.aiide-workflow-foot button {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.aiide-workflow-foot small {
+  font-size: 10px;
+  opacity: 0.55;
+  min-width: 0;
+}
+.aiide-recent {
+  display: flex;
+  flex-direction: column;
+}
+.aiide-recent-row {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr) 120px 80px 70px auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--aiide-line);
+  font-size: 12px;
+}
+.aiide-recent-row:last-child {
+  border: 0;
+}
+.aiide-recent-row small {
+  font-size: 11px;
+  opacity: 0.55;
+}
+.aiide-recent-row .aiide-link {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  justify-content: flex-start;
+}
+.aiide-templates {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0 6px;
+}
+.aiide .aiide-template {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 14px;
+  text-align: left;
+  background: var(--theia-editor-background);
+  border-radius: 8px;
+}
+.aiide .aiide-template i {
+  font-size: 16px;
+  color: var(--aiide-accent);
+}
+.aiide .aiide-template strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.aiide .aiide-template small {
+  font-size: 11px;
+  opacity: 0.6;
+  line-height: 1.45;
+}
+.aiide .aiide-template[aria-checked='true'] {
+  border-color: var(--aiide-accent);
+  background: var(--aiide-soft);
+}
+details.aiide-card > summary {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 1;
+}
+details.aiide-card {
+  margin-top: 0;
+}
+
+/* ---------- Runs ---------- */
+.aiide-launch {
+  margin-top: 0;
+}
+.aiide-filterbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.aiide-filterbar .aiide-chips {
+  margin: 0;
+}
+.aiide input.aiide-search {
+  width: 240px;
+  min-height: 30px;
+  padding: 6px 10px;
+}
+
+/* ---------- Playground ---------- */
+.aiide-playground h3 i {
+  color: var(--aiide-accent);
+  margin-right: 4px;
+}
+.aiide-playground-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 14px;
+}
+.aiide-playground details {
+  margin: 0 0 14px;
+}
+.aiide-playground details textarea {
+  margin-top: 8px;
+}
+.aiide-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 460px;
+  overflow-y: auto;
+  padding: 4px 2px 12px;
+  margin-bottom: 12px;
+}
+.aiide-message {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--theia-editor-background);
+  border: 1px solid var(--aiide-line);
+}
+.aiide-message.user {
+  align-self: flex-end;
+  background: var(--aiide-soft);
+  border-color: color-mix(in srgb, var(--aiide-accent) 35%, transparent);
+}
+.aiide-message small {
+  font-size: 10px;
+  opacity: 0.55;
+}
+.aiide-message pre {
+  margin: 4px 0 0;
+  font-family: var(--theia-ui-font-family);
+  font-size: 12px;
+}
+.aiide-message-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 10px;
+  opacity: 0.6;
+  align-items: center;
+}
+.aiide .aiide-message-stats .aiide-link {
+  min-height: 0;
+  font-size: 10px;
+}
+.aiide-composer {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+.aiide-composer textarea {
+  flex: 1;
+}
+.aiide .aiide-composer button {
+  align-self: stretch;
+  padding: 0 18px;
+}
+
+/* ---------- Welcome ---------- */
+.aiide-welcome {
+  padding: 64px 32px 40px;
+  max-width: 1040px;
+  margin: auto;
+  width: 100%;
+}
+.aiide-welcome .aiide-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.aiide-welcome h2 {
+  font-size: 36px;
+  line-height: 1.15;
+  letter-spacing: -1.1px;
+  margin: 18px 0 14px;
+  max-width: 720px;
+}
+.aiide-welcome > p {
+  font-size: 14px;
+  max-width: 600px;
+}
+.aiide-welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin: 28px 0 6px;
+}
+.aiide-welcome-links {
+  display: flex;
+  gap: 6px;
+}
+.aiide button.aiide-large {
+  font-size: 13px;
+  padding: 11px 20px;
+  min-height: 42px;
+}
+.aiide-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 40px 0 20px;
+}
+.aiide-feature-grid .aiide-card {
+  margin: 0;
+}
+.aiide-feature-icon {
+  font-size: 18px;
+  color: var(--aiide-accent);
+  display: block;
+  margin-bottom: 12px;
+}
+.aiide-feature-grid h3 {
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.aiide-feature-grid p {
+  font-size: 11px;
+  margin: 0;
+}
+
+/* ---------- Responsive ---------- */
+@media (min-width: 1800px) {
+  .aiide-workflows {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 1000px) {
+  .aiide-workflows {
+    grid-template-columns: 1fr;
+  }
+  .aiide-templates,
+  .aiide-feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .aiide-recent-row {
+    grid-template-columns: 86px minmax(0, 1fr) 70px auto;
+  }
+  .aiide-recent-row small:nth-of-type(1),
+  .aiide-recent-row small:nth-of-type(3) {
+    display: none;
+  }
+}
+@media (max-width: 850px) {
+  .aiide-columns,
+  .aiide-columns.wide-left,
+  .aiide-playground-controls {
+    grid-template-columns: 1fr;
+  }
+  .aiide-stats,
+  .aiide-metric-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .aiide-sidebar {
+    width: 56px;
+  }
+  .aiide-sidebar .aiide-nav-label,
+  .aiide-nav-group,
+  .aiide-nav-count {
+    display: none;
+  }
+  .aiide-project-chip {
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    padding: 0;
+  }
+  .aiide .aiide-tabs button {
+    justify-content: center;
+    padding: 8px 0;
+  }
+  .aiide-main,
+  .aiide-welcome {
+    padding: 20px;
+  }
+  .aiide-error {
+    margin: 12px 20px 0;
+  }
+  .aiide-welcome h2 {
+    font-size: 28px;
+  }
+}

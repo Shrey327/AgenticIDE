@@ -1,0 +1,7 @@
+file '05-source-frame-0.png'
+duration 5.154
+file '05-source-frame-1.png'
+duration 6.056
+file '05-source-frame-2.png'
+duration 4.070
+file '05-source-frame-2.png'

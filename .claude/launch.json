@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "aiide-browser",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "start:browser",
+        "--",
+        "/Users/shreyansh/Documents/AgenticIDE/examples/local-lab",
+        "--port=3080"
+      ],
+      "port": 3080
+    },
+    {
+      "name": "aiide-browser-mono",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "start:browser",
+        "--",
+        "/Users/shreyansh/Documents/AgenticIDE/examples/local-lab",
+        "--port=3090"
+      ],
+      "port": 3090
+    }
+  ]
+}

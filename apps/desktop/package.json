@@ -1,0 +1,98 @@
+{
+  "name": "@aiide/desktop",
+  "version": "0.2.1",
+  "private": true,
+  "main": "lib/backend/electron-main.js",
+  "scripts": {
+    "build": "theia build --mode development",
+    "start": "theia start --hostname=127.0.0.1",
+    "package": "electron-builder --publish never"
+  },
+  "dependencies": {
+    "@theia/core": "1.77.0",
+    "@theia/editor": "1.77.0",
+    "@theia/filesystem": "1.77.0",
+    "@theia/file-search": "1.77.0",
+    "@theia/markers": "1.77.0",
+    "@theia/messages": "1.77.0",
+    "@theia/monaco": "1.77.0",
+    "@theia/navigator": "1.77.0",
+    "@theia/output": "1.77.0",
+    "@theia/preferences": "1.77.0",
+    "@theia/process": "1.77.0",
+    "@theia/terminal": "1.77.0",
+    "@theia/workspace": "1.77.0",
+    "@theia/scm": "1.77.0",
+    "@theia/search-in-workspace": "1.77.0",
+    "@theia/task": "1.77.0",
+    "@theia/debug": "1.77.0",
+    "@theia/plugin-ext": "1.77.0",
+    "@theia/plugin-ext-vscode": "1.77.0",
+    "@theia/vsx-registry": "1.77.0",
+    "@theia/ai-core": "1.77.0",
+    "@theia/ai-chat": "1.77.0",
+    "@theia/ai-chat-ui": "1.77.0",
+    "@theia/ai-openai": "1.77.0",
+    "@theia/ai-ollama": "1.77.0",
+    "@aiide/theia-extension": "0.2.1",
+    "@theia/electron": "1.77.0"
+  },
+  "devDependencies": {
+    "@theia/cli": "1.77.0",
+    "electron": "44.9.1",
+    "electron-builder": "26.0.12"
+  },
+  "theia": {
+    "target": "electron",
+    "frontend": {
+      "config": {
+        "applicationName": "AI Engineering IDE",
+        "defaultTheme": "aiide-black",
+        "defaultIconTheme": "theia-file-icons",
+        "preferences": {
+          "files.autoSave": "off",
+          "telemetry.telemetryLevel": "off",
+          "python.experiments.enabled": false,
+          "python.languageServer": "None",
+          "extensions.autoUpdate": false
+        },
+        "electron": {
+          "windowOptions": {
+            "width": 1400,
+            "height": 950,
+            "minWidth": 800,
+            "minHeight": 600
+          }
+        }
+      }
+    }
+  },
+  "build": {
+    "appId": "dev.aiide.desktop",
+    "productName": "AI Engineering IDE",
+    "directories": {
+      "output": "../../dist"
+    },
+    "files": [
+      "lib/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.developer-tools",
+      "identity": null
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Development"
+    },
+    "npmRebuild": false,
+    "asar": false
+  },
+  "description": "Local-first AI engineering IDE",
+  "author": "AIIDE contributors"
+}

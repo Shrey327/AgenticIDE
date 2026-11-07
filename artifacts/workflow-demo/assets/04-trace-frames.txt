@@ -1,0 +1,7 @@
+file '04-trace-frame-0.png'
+duration 6.466
+file '04-trace-frame-1.png'
+duration 2.010
+file '04-trace-frame-2.png'
+duration 9.114
+file '04-trace-frame-2.png'

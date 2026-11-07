@@ -1,0 +1,16 @@
+version: 1
+name: sklearn-example
+environment:
+  python: .venv/bin/python
+commands:
+  example: [python, main.py]
+adapters: [sklearn]
+connections: []
+telemetry:
+  captureContent: false
+  retentionDays: 7
+  budgetMb: 2048
+
+training:
+  framework: sklearn
+  resume: false
