@@ -1,0 +1,7 @@
+file '02-notebook-frame-0.png'
+duration 4.650
+file '02-notebook-frame-1.png'
+duration 7.150
+file '02-notebook-frame-2.png'
+duration 10.350
+file '02-notebook-frame-2.png'

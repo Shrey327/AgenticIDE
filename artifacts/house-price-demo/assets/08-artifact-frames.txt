@@ -1,0 +1,5 @@
+file '08-artifact-frame-0.png'
+duration 5.370
+file '08-artifact-frame-1.png'
+duration 14.520
+file '08-artifact-frame-1.png'

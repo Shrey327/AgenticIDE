@@ -1,0 +1,5 @@
+file '03-home-frame-0.png'
+duration 6.730
+file '03-home-frame-1.png'
+duration 8.544
+file '03-home-frame-1.png'

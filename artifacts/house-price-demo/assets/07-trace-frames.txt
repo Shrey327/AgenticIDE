@@ -1,0 +1,5 @@
+file '07-trace-frame-0.png'
+duration 7.210
+file '07-trace-frame-1.png'
+duration 10.082
+file '07-trace-frame-1.png'

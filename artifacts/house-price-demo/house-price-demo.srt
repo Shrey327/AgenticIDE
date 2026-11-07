@@ -1,0 +1,95 @@
+1
+00:00:00,700 --> 00:00:08,860
+Let's train a house price model the way most of us do: in a notebook, in Colab or VS Code. Then in AI Engineering IDE.
+
+2
+00:00:09,210 --> 00:00:14,330
+Same data, same scikit-learn code. The difference is everything around the code.
+
+3
+00:00:16,180 --> 00:00:19,780
+In a notebook, you run a cell and read the score it prints.
+
+4
+00:00:20,130 --> 00:00:26,930
+Change a hyperparameter and run it again, and the previous result is overwritten, unless you copied it somewhere.
+
+5
+00:00:27,280 --> 00:00:36,480
+Comparing runs, keeping track of saved models, and remembering what changed is left to you, or to an extra tool like MLflow or Weights and Biases.
+
+6
+00:00:38,330 --> 00:00:44,010
+Here, the project opens on Home. The Train a model card tracks what is already set up.
+
+7
+00:00:44,360 --> 00:00:50,840
+The training command is configured and the environment is installed. The next step is to start a training job.
+
+8
+00:00:53,604 --> 00:01:02,004
+In Training, choose the train command and set the parameters: two hundred trees, a learning rate of zero point one, and depth three.
+
+9
+00:01:02,354 --> 00:01:09,554
+Start training. Training and validation error stream in while the job runs, instead of appearing only after the cell finishes.
+
+10
+00:01:09,904 --> 00:01:16,464
+It finishes with a validation R squared of zero point nine zero, and the trained model is recorded as an artifact.
+
+11
+00:01:20,604 --> 00:01:26,684
+Now try a bigger model: three hundred trees, depth eight, and a learning rate of zero point two.
+
+12
+00:01:27,034 --> 00:01:32,634
+Select the baseline as the comparison run. Its curves appear dashed, on the same charts.
+
+13
+00:01:32,984 --> 00:01:42,824
+Training error drops to about eight thousand dollars, far below the baseline. But validation error ends higher, around fifty-five thousand versus fifty thousand.
+
+14
+00:01:43,174 --> 00:01:49,734
+That gap between training and validation is overfitting, and the overlaid curves show it while the job is still running.
+
+15
+00:01:50,084 --> 00:01:55,444
+The final validation R squared drops to zero point eight eight, so the baseline stays.
+
+16
+00:01:57,294 --> 00:02:05,054
+In Runs, both experiments are saved with their exact parameters, duration, metrics, and evaluation results.
+
+17
+00:02:05,404 --> 00:02:10,764
+They are still there after restarting the IDE, and you can compare any two side by side.
+
+18
+00:02:19,771 --> 00:02:25,931
+The trace breaks each run into steps: load the data, split it, fit, evaluate, and save.
+
+19
+00:02:26,281 --> 00:02:31,561
+Select a step to see its timing and attributes, or jump straight to the code that produced it.
+
+20
+00:02:37,063 --> 00:02:41,383
+Back in Training, the saved model is linked to the run that created it.
+
+21
+00:02:41,733 --> 00:02:45,973
+Inspect it to find the exact file, ready to load for inference.
+
+22
+00:02:56,953 --> 00:03:02,073
+Notebooks are great for quick exploration, and Colab gives you free hosted GPUs.
+
+23
+00:03:02,423 --> 00:03:12,823
+For iterating on a model, this workspace records every run, charts it live, compares experiments, and keeps models traceable, without setting up a separate tracking server.
+
+24
+00:03:13,173 --> 00:03:18,773
+Your code stays plain Python with a few logging calls. The IDE keeps the record.

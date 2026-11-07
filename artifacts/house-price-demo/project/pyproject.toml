@@ -1,0 +1,8 @@
+[project]
+name = "aiide-sklearn-example"
+version = "0.1.0"
+requires-python = ">=3.12,<3.14"
+dependencies = ["scikit-learn==1.7.2"]
+
+[tool.uv]
+package = false

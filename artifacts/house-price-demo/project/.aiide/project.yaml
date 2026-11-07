@@ -1,0 +1,17 @@
+version: 1
+name: house-prices
+environment:
+  python: .venv/bin/python
+commands:
+  setup: [uv, sync, --locked]
+  train: [python, train.py]
+adapters: [sklearn]
+connections: []
+telemetry:
+  captureContent: false
+  retentionDays: 7
+  budgetMb: 2048
+
+training:
+  framework: sklearn
+  resume: false

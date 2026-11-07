@@ -1,0 +1,110 @@
+[
+  {
+    "id": "01-intro",
+    "section": "HOUSE PRICE PREDICTION",
+    "title": "Same model.\nBetter loop.",
+    "benefit": "A notebook gets you a number. A workspace gets you evidence.",
+    "tag": "SCIKIT-LEARN · 12,000 SYNTHETIC HOMES",
+    "card": "dataset",
+    "lines": [
+      "Let's train a house price model the way most of us do: in a notebook, in Colab or VS Code. Then in AI Engineering IDE.",
+      "Same data, same scikit-learn code. The difference is everything around the code."
+    ]
+  },
+  {
+    "id": "02-notebook",
+    "section": "THE NOTEBOOK WAY",
+    "title": "Results live\nin cell output.",
+    "benefit": "Re-run a cell and the last result is gone.",
+    "tag": "TYPICAL NOTEBOOK WORKFLOW",
+    "card": "notebook",
+    "lines": [
+      "In a notebook, you run a cell and read the score it prints.",
+      "Change a hyperparameter and run it again, and the previous result is overwritten, unless you copied it somewhere.",
+      "Comparing runs, keeping track of saved models, and remembering what changed is left to you, or to an extra tool like MLflow or Weights and Biases."
+    ]
+  },
+  {
+    "id": "03-home",
+    "section": "01 / OPEN THE PROJECT",
+    "title": "Start from\na checklist.",
+    "benefit": "Home shows what is set up and what to do next.",
+    "tag": "REAL IDE · ISOLATED DEMO PROJECT",
+    "lines": [
+      "Here, the project opens on Home. The Train a model card tracks what is already set up.",
+      "The training command is configured and the environment is installed. The next step is to start a training job."
+    ]
+  },
+  {
+    "id": "04-baseline",
+    "section": "02 / TRAIN A BASELINE",
+    "title": "Watch it\nlearn.",
+    "benefit": "Learning curves stream in while the job runs.",
+    "tag": "REAL TRAINING · LOCAL CPU",
+    "lines": [
+      "In Training, choose the train command and set the parameters: two hundred trees, a learning rate of zero point one, and depth three.",
+      "Start training. Training and validation error stream in while the job runs, instead of appearing only after the cell finishes.",
+      "It finishes with a validation R squared of zero point nine zero, and the trained model is recorded as an artifact."
+    ]
+  },
+  {
+    "id": "05-bigger",
+    "section": "03 / TRY A BIGGER MODEL",
+    "title": "Compare,\ndon't guess.",
+    "benefit": "Overlay a new run on the baseline and spot overfitting as it happens.",
+    "tag": "REAL TRAINING · SAME DATA SPLIT",
+    "lines": [
+      "Now try a bigger model: three hundred trees, depth eight, and a learning rate of zero point two.",
+      "Select the baseline as the comparison run. Its curves appear dashed, on the same charts.",
+      "Training error drops to about eight thousand dollars, far below the baseline. But validation error ends higher, around fifty-five thousand versus fifty thousand.",
+      "That gap between training and validation is overfitting, and the overlaid curves show it while the job is still running.",
+      "The final validation R squared drops to zero point eight eight, so the baseline stays."
+    ]
+  },
+  {
+    "id": "06-runs",
+    "section": "04 / KEEP THE HISTORY",
+    "title": "Every run,\nremembered.",
+    "benefit": "Parameters, metrics, and evaluations saved for every experiment.",
+    "tag": "LOCAL RUN HISTORY · SURVIVES RESTARTS",
+    "lines": [
+      "In Runs, both experiments are saved with their exact parameters, duration, metrics, and evaluation results.",
+      "They are still there after restarting the IDE, and you can compare any two side by side."
+    ]
+  },
+  {
+    "id": "07-trace",
+    "section": "05 / SEE WHERE TIME GOES",
+    "title": "Every step,\ntimed.",
+    "benefit": "From a slow or failing step straight to its code.",
+    "tag": "PYTHON → COLLECTOR → LOCAL TRACE STORE",
+    "lines": [
+      "The trace breaks each run into steps: load the data, split it, fit, evaluate, and save.",
+      "Select a step to see its timing and attributes, or jump straight to the code that produced it."
+    ]
+  },
+  {
+    "id": "08-artifact",
+    "section": "06 / FIND THE MODEL",
+    "title": "The model,\nnot a mystery file.",
+    "benefit": "Saved models stay linked to the run that made them.",
+    "tag": "REAL ARTIFACT INSPECTION",
+    "lines": [
+      "Back in Training, the saved model is linked to the run that created it.",
+      "Inspect it to find the exact file, ready to load for inference."
+    ]
+  },
+  {
+    "id": "09-outro",
+    "section": "NOTEBOOK VS WORKSPACE",
+    "title": "Less bookkeeping.\nMore evidence.",
+    "benefit": "Plain Python code. The IDE keeps the record.",
+    "tag": "AI ENGINEERING IDE · PREVIEW 0.2.1",
+    "card": "compare",
+    "lines": [
+      "Notebooks are great for quick exploration, and Colab gives you free hosted GPUs.",
+      "For iterating on a model, this workspace records every run, charts it live, compares experiments, and keeps models traceable, without setting up a separate tracking server.",
+      "Your code stays plain Python with a few logging calls. The IDE keeps the record."
+    ]
+  }
+]

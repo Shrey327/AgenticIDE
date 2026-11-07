@@ -1,0 +1,5 @@
+file '06-runs-frame-0.png'
+duration 8.810
+file '06-runs-frame-1.png'
+duration 13.667
+file '06-runs-frame-1.png'

@@ -10,7 +10,8 @@ export function MetricChart({
 }) {
   const primary = values.filter((v) => Number.isFinite(Number(v.value))),
     secondary = compare.filter((v) => Number.isFinite(Number(v.value)));
-  if (!primary.length) return null;
+  // A single value has no curve; the card already shows it as a number.
+  if (primary.length < 2 && secondary.length < 2) return null;
   const all = [...primary, ...secondary],
     low = Math.min(...all.map((v) => Number(v.value))),
     high = Math.max(...all.map((v) => Number(v.value)));
@@ -48,10 +49,10 @@ export function MetricChart({
         />
       )}
       <text x="10" y="110" fill="currentColor" fontSize="10">
-        {all.every((v) => v.step !== undefined) ? start : 'Start'}
+        {all.every((v) => v.step != null) ? start : 'Start'}
       </text>
       <text x="260" y="110" fill="currentColor" fontSize="10">
-        {all.every((v) => v.step !== undefined) ? end : 'Latest'}
+        {all.every((v) => v.step != null) ? end : 'Latest'}
       </text>
     </svg>
   );

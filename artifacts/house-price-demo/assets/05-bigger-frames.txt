@@ -1,0 +1,11 @@
+file '05-bigger-frame-0.png'
+duration 7.130
+file '05-bigger-frame-1.png'
+duration 5.950
+file '05-bigger-frame-2.png'
+duration 10.190
+file '05-bigger-frame-3.png'
+duration 6.910
+file '05-bigger-frame-4.png'
+duration 6.510
+file '05-bigger-frame-4.png'
