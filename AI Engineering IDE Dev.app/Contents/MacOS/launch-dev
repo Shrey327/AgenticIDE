@@ -1,5 +1,10 @@
 #!/bin/zsh
 set -eu
+# macOS may start script-based apps under Rosetta; children then pick x86_64 from universal
+# binaries (e.g. python.org Python) and fail to load arm64-only wheels. Re-run natively.
+if [[ "$(/usr/sbin/sysctl -n sysctl.proc_translated 2>/dev/null)" == "1" ]]; then
+  exec /usr/bin/arch -arm64 /bin/zsh "$0" "$@"
+fi
 # shortcut: this launcher uses this checkout and Node installation; update paths if either moves.
 export PATH="/Users/shreyansh/.nvm/versions/node/v24.12.0/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 cd /Users/shreyansh/Documents/AgenticIDE
