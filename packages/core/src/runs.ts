@@ -21,9 +21,11 @@ export class Runs {
     name: string,
     training?: Run['training'],
     trainingEnv: Record<string, string> = {},
+    /** IDE-provided command (e.g. the experiment lab) instead of a named project command. */
+    builtin?: { command: string[]; lab: Run['lab'] },
   ): Promise<Run> {
     const project = loadProject(this.root),
-      command = project.commands[name];
+      command = builtin?.command ?? project.commands[name];
     if (!command?.length) throw new Error('Choose a configured run command');
     if (this.children.size >= 8)
       throw new Error('Eight runs are already active');
@@ -78,6 +80,7 @@ export class Runs {
       environment: env,
       configuration: project,
       training,
+      lab: builtin?.lab,
     };
     this.store.saveRun(run);
     const executable =

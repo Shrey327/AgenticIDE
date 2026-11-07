@@ -105,33 +105,33 @@ export function Overview({
       id: 'train',
       icon: 'pulse',
       title: 'Train a model',
-      text: 'Launch local or SSH jobs, watch learning curves, resume checkpoints.',
-      tab: 'Training',
-      cta: 'Open training',
+      text: 'Compare models and hyperparameters on a CSV without code, then train and test the winner.',
+      tab: 'Lab',
+      cta: 'Open experiment lab',
       steps: [
         {
-          label: 'Training project (PyTorch, Trainer, sklearn)',
-          done:
-            Boolean(project.config.training) ||
-            ['torch', 'transformers', 'sklearn'].some((f) =>
-              frameworks.includes(f),
-            ),
-          template: 'pytorch',
-        },
-        {
-          label: 'Install environment (run setup)',
+          label: 'Environment ready (run setup)',
           done: setupOk,
           tab: 'Runs',
         },
         {
-          label: 'Start a training job',
-          done: training.length > 0,
-          tab: 'Training',
+          label: 'Run a model sweep',
+          done: runs.some((r) => r.lab?.kind === 'sweep' && done(r)),
+          tab: 'Lab',
         },
         {
-          label: 'Compare two runs',
-          done: training.length > 1,
-          tab: 'Training',
+          label: 'Train the best model',
+          done:
+            runs.some((r) => r.lab?.kind === 'final' && done(r)) ||
+            training.length > 0,
+          tab: 'Lab',
+        },
+        {
+          label: 'Custom training script (PyTorch, Trainer…)',
+          done:
+            training.length > 0 ||
+            ['torch', 'transformers'].some((f) => frameworks.includes(f)),
+          template: 'pytorch',
         },
       ],
     },

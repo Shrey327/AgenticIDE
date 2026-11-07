@@ -14,3 +14,4 @@ export * from './ssh';
 export * from './wandb';
 
 export * from './agent-access';
+export * from './lab';

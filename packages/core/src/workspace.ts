@@ -20,6 +20,7 @@ import { Rag } from './rag';
 import { Integrations } from './integrations';
 import { Training } from './training';
 import { Wandb } from './wandb';
+import { Lab } from './lab';
 import { hash, within } from './security';
 import { RpcRequest, Run } from './types';
 
@@ -48,6 +49,7 @@ export class Workspace {
   readonly integrations: Integrations;
   readonly training: Training;
   readonly wandb: Wandb;
+  readonly lab: Lab;
   private qdrantName: string;
   private managedQdrant = false;
   private release?: () => void;
@@ -92,6 +94,7 @@ export class Workspace {
       assets,
     );
     this.wandb = new Wandb(this.root, assets, this.connections);
+    this.lab = new Lab(this.root, this.runs, assets);
     this.qdrantName = 'aiide-qdrant-' + hash(this.root).slice(0, 12);
   }
   static async open(root: string) {
@@ -172,6 +175,20 @@ export class Workspace {
         return this.training.artifact(args.id, args.path);
       case 'training.download':
         return this.training.download(args.id, args.path);
+      case 'lab.catalog':
+        return this.lab.catalog();
+      case 'lab.files':
+        return this.lab.files();
+      case 'lab.inspect':
+        return this.lab.inspect(args.file);
+      case 'lab.sweep':
+        return this.lab.sweep(args.config);
+      case 'lab.final':
+        return this.lab.final(args.config);
+      case 'lab.models':
+        return this.lab.models();
+      case 'lab.predict':
+        return this.lab.predict(args);
       case 'wandb.status':
         return this.wandb.status();
       case 'wandb.install':

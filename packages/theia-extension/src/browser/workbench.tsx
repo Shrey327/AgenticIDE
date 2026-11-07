@@ -5,6 +5,7 @@ import { ModelsPanel } from './models-panel.js';
 import { RagPanel } from './rag-panel.js';
 import { AssistantPanel } from './assistant-panel.js';
 import { TrainingPanel } from './training-panel.js';
+import { LabPanel } from './lab-panel.js';
 import { SettingsPanel } from './settings-panel.js';
 import { AgentAccessPanel } from './agent-access-panel.js';
 import { Call, format, Heading } from './shared.js';
@@ -40,7 +41,8 @@ const nav: NavItem[] = [
     group: 'Build',
   },
   { id: 'Agents', label: 'External agents', icon: 'plug', group: 'Build' },
-  { id: 'Training', label: 'Training', icon: 'pulse', group: 'Train' },
+  { id: 'Lab', label: 'Experiment lab', icon: 'graph-scatter', group: 'Train' },
+  { id: 'Training', label: 'Training jobs', icon: 'pulse', group: 'Train' },
   { id: 'Runs', label: 'Runs', icon: 'history', group: 'Observe' },
   { id: 'Traces', label: 'Traces', icon: 'list-tree', group: 'Observe' },
 ];
@@ -393,6 +395,15 @@ function Workbench({
               />
               <AgentAccessPanel call={call} perform={perform} />
             </>
+          )}
+          {tab === 'Lab' && (
+            <LabPanel
+              runs={runs}
+              call={call}
+              perform={perform}
+              refresh={refresh}
+              openTrace={openTrace}
+            />
           )}
           {tab === 'Training' && (
             <TrainingPanel

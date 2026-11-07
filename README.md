@@ -92,6 +92,19 @@ Settings can issue a revocable, eight-hour MCP bearer credential. Configure your
 
 Source staging excludes common credential files/directories, symlinks, binaries, and files larger than 2 MB, with a 50 MB/10,000-file cap. Do not rely on filename/pattern filtering to identify every possible secret in arbitrary source code. Containers also depend on the security of the Docker daemon and host.
 
+## Experiment lab (no-code model selection)
+
+**Train → Experiment lab** runs model and hyperparameter sweeps on any CSV in the workspace without writing code:
+
+1. **Data:** pick a CSV, choose the target column, and click feature chips to exclude columns. The task (regression or classification) is auto-detected and can be switched. Missing values are imputed and text columns one-hot encoded automatically.
+2. **Evaluation:** K-fold cross-validation or a holdout split; choose metrics (RMSE, MAE, R², MAPE / accuracy, F1, precision, recall, ROC AUC, log loss) and the one to rank by.
+3. **Models & hyperparameters:** tick candidates (linear/ridge/lasso or logistic, KNN, random forest, extra trees, gradient boosting, histogram gradient boosting, SVM, plus XGBoost/LightGBM when installed) and edit each hyperparameter as comma-separated values. Grid search tries every combination; random search samples N of them (max 200 trials).
+4. **Leaderboard:** trials stream in live with mean ± std per metric, a train-vs-validation gap (ok / watch / overfit), and fit time. **Tweak & re-run** restores a sweep's settings.
+5. **Train final** fits the chosen configuration on all rows and saves `models/<name>/model.joblib` (including preprocessing) with `model.json` metadata.
+6. **Try a trained model:** an input form generated from the model's features predicts instantly; **Batch predict a CSV** writes `predictions/<model>-<time>.csv`.
+
+Sweeps and final fits are ordinary recorded runs, so they also appear in Runs and Traces. The lab runs in the project's own Python environment and needs scikit-learn there (add the `sklearn` integration from Home if it is missing).
+
 ## Training, SSH, and W&B
 
 The **Training** workspace starts local or Linux SSH jobs, charts metrics, compares configurations, inspects artifacts, and explicitly resumes supported PyTorch/Trainer checkpoints. SSH jobs survive connection loss and IDE restarts. The read-only W&B panel browses runs, history, and artifact file metadata using a separately installed pinned SDK.

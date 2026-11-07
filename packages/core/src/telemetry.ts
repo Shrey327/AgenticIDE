@@ -131,6 +131,7 @@ export class Telemetry {
             'checkpoint',
             'hardware',
             'diagnostic',
+            'trial',
           ].includes(e.kind) ||
           !Number.isFinite(e.timestamp)
         )

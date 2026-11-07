@@ -30,6 +30,8 @@ export interface Run {
     dropped?: number;
     resumeFrom?: { runId: string; path: string };
   };
+  /** Experiment lab sweep or final-model run, with the configuration that produced it. */
+  lab?: { kind: 'sweep' | 'final'; config: Record<string, unknown> };
 }
 export interface Span {
   traceId: string;
