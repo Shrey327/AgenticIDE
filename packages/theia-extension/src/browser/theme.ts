@@ -234,7 +234,12 @@ const tokenColors = [
     settings: { foreground: white },
   },
   {
-    scope: ['entity.name.type', 'entity.name.class', 'support.type', 'support.class'],
+    scope: [
+      'entity.name.type',
+      'entity.name.class',
+      'support.type',
+      'support.class',
+    ],
     settings: { foreground: '#cccccc', fontStyle: 'italic' },
   },
   {
@@ -246,9 +251,15 @@ const tokenColors = [
     settings: { foreground: '#8c8c8c' },
   },
   { scope: ['entity.name.tag'], settings: { foreground: white } },
-  { scope: ['entity.other.attribute-name'], settings: { foreground: '#b3b3b3' } },
+  {
+    scope: ['entity.other.attribute-name'],
+    settings: { foreground: '#b3b3b3' },
+  },
   { scope: ['invalid'], settings: { foreground: danger } },
-  { scope: ['markup.heading'], settings: { foreground: white, fontStyle: 'bold' } },
+  {
+    scope: ['markup.heading'],
+    settings: { foreground: white, fontStyle: 'bold' },
+  },
   { scope: ['markup.inserted'], settings: { foreground: white } },
   { scope: ['markup.deleted'], settings: { foreground: danger } },
 ];

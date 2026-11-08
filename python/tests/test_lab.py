@@ -36,6 +36,21 @@ class GridTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unknown model"):
             lab.trials({"task": "classification", "models": [{"id": "ridge"}]})
 
+    def test_rejects_fractional_integers_nonfinite_values_and_unknown_parameters(self):
+        for value in ("1.5", "nan", "inf"):
+            with self.assertRaisesRegex(ValueError, "not a valid int"):
+                lab._parse("int", value, "n_neighbors")
+        with self.assertRaisesRegex(ValueError, "not a valid float"):
+            lab._parse("float", "nan", "C")
+        with self.assertRaisesRegex(ValueError, "Unknown hyperparameter"):
+            lab.trials({"task": "classification", "models": [{"id": "svm", "grid": {"typo": "1"}}]})
+
+    def test_random_search_does_not_expand_huge_grid(self):
+        values = ",".join(str(i) for i in range(1, 1001))
+        config = {"task": "regression", "search": "random", "trials": 3, "models": [{"id": "random_forest", "grid": {
+            "n_estimators": values, "max_depth": values, "min_samples_leaf": values}}]}
+        self.assertEqual(len(lab.trials(config)), 3)
+
 
 @unittest.skipUnless(HAS_SKLEARN, "scikit-learn not installed")
 class WorkflowTests(unittest.TestCase):
@@ -88,6 +103,44 @@ class WorkflowTests(unittest.TestCase):
         result = lab.predict({"model": str(directory), "rows": [{"size": "60", "price": "2500"}]})
         self.assertIn(result["predictions"][0]["prediction"], {"north", "south", lab.MISSING_CATEGORY})
         self.assertAlmostEqual(sum(result["predictions"][0]["probabilities"].values()), 1.0, places=2)
+
+    def test_iris_sample_multimodel_classification_and_final_inference(self):
+        pathlib.Path("iris.csv").write_text(lab.sample()["csv"])
+        profile = lab.inspect({"file": "iris.csv"})
+        self.assertEqual(profile["rows"], 150)
+        self.assertEqual(profile["target"], "species")
+        config = {"file": "iris.csv", "target": "species", "task": "classification", "metrics": ["accuracy", "f1", "roc_auc"], "primary": "f1",
+                  "validation": {"type": "kfold", "folds": 3}, "models": [
+                      {"id": "svm", "grid": {"C": "1, 10"}}, {"id": "logistic", "grid": {"C": "1"}}]}
+        events = []
+        with patch("aiide_sdk._event", lambda kind, name, value, step=None: events.append((kind, value))):
+            lab.sweep(config)
+        trials = [v for k, v in events if k == "trial"]
+        self.assertEqual(len(trials), 3)
+        self.assertTrue(all(t["status"] == "completed" and t["scores"]["f1"] > 0.9 for t in trials))
+        with patch("aiide_sdk._event", lambda *a, **k: None):
+            lab.final({**config, "features": ["petal length (cm)"], "model": "svm", "params": {"C": "1"}})
+        directory = next(pathlib.Path("models").iterdir())
+        pathlib.Path("predict.csv").write_text("petal length (cm)\n1.4\n4.5\n")
+        result = lab.predict({"model": str(directory), "file": "predict.csv", "output": "predictions.csv", "output_display": "predictions.csv"})
+        self.assertEqual(result["count"], 2)
+        pathlib.Path("bad.csv").write_text("wrong\n1.4\n")
+        with self.assertRaisesRegex(ValueError, "missing feature columns"):
+            lab.predict({"model": str(directory), "file": "bad.csv"})
+
+    def test_categorical_histogram_boosting_and_failed_sweeps(self):
+        pathlib.Path("categorical.csv").write_text("category,target\n" + "".join(f"city-{i % 20},{i % 2}\n" for i in range(120)))
+        config = {"file": "categorical.csv", "target": "target", "task": "classification", "metrics": ["f1"], "primary": "f1",
+                  "validation": {"type": "kfold", "folds": 3}, "models": [{"id": "hist_gradient_boosting", "grid": {"max_iter": "5", "learning_rate": "0.1"}}]}
+        with patch("aiide_sdk._event", lambda *a, **k: None):
+            lab.sweep(config)
+            with self.assertRaisesRegex(ValueError, "Every trial failed"):
+                lab.sweep({**config, "models": [{"id": "svm", "grid": {"C": "-1"}}]})
+        with self.assertRaisesRegex(ValueError, "at least one feature"):
+            lab._load({**config, "features": []})
+        pathlib.Path("rare.csv").write_text("feature,target\n" + "".join(f"{i},{'rare' if i < 2 else 'common'}\n" for i in range(20)))
+        with self.assertRaisesRegex(ValueError, "smallest target class has 2 rows"):
+            lab.sweep({**config, "file": "rare.csv"})
 
 
 if __name__ == "__main__":

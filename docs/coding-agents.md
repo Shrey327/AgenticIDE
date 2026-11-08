@@ -61,7 +61,7 @@ Try these requests:
 
 Tool discovery reflects the credential's permissions. A read-only connection does not advertise editing or execution tools. Structured results and descriptive schemas make the interface usable without navigating the IDE visually. Existing synchronous `run_command` remains available; prefer `start_command` and polling for longer checks.
 
-Telemetry is already governed by the project's capture/redaction settings. A content-disabled log cannot be reconstructed by an agent. Training metrics report collected values; no GPU measurements are invented. MCP does not expose local/SSH job launch, dependency installation, W&B credentials, credential issuance, or automatic application of host changes.
+Telemetry is already governed by the project's capture/redaction settings. A content-disabled log cannot be reconstructed by an agent. Training metrics report collected values; no GPU measurements are invented. Read/staged credentials do not expose local job launch or dependency installation. The separately issued `workflow` permission enables the built-in local workflows described below. SSH launch, W&B credentials, credential issuance, arbitrary host shell commands and automatic application of staged source edits remain unavailable through MCP.
 
 ## Review and apply
 
@@ -84,3 +84,18 @@ The IDE provides observability and an MCP workflow; it does not embed either ven
 The regression suite additionally tests read-only discovery, structured diagnostic results, event pagination, credential ownership, redaction, and preservation of existing guidance files.
 
 Configuration references checked for this implementation: [Codex MCP configuration](https://learn.chatgpt.com/docs/extend/mcp?surface=cli) and [Claude Code MCP setup](https://code.claude.com/docs/en/mcp). Their installed CLI help was also checked.
+
+## Complete no-code workflows from Codex or Claude Code
+
+In **Build → External agents**, choose **Local setup, training, and inference + staged edits**, issue a credential, and connect the client using the displayed command. This grants real host CPU/GPU execution and network downloads for the built-in workflow allowlist; it is separate from staged container execution. Existing read/staged credentials retain their original permissions.
+
+- `inspect_workflow` with `operation: "workflows.catalog"` returns supported steps and argument examples. Other read operations expose the lab catalog, dataset schema, saved model summaries, and Hub readiness.
+- `run_workflow` accepts a fixed operation enum: `project.create`, `environment.setup`, `lab.sample`, `lab.sweep`, `lab.final`, `lab.predict`, `hf.download`, `hf.train`, `hf.generate`, `hf.result`, and `runs.cancel`. Arguments go through the same validation as the IDE pages.
+- Template creation preserves existing folders. Open the returned folder and reconnect there; grants are workspace-specific. Environment setup uses `uv sync --locked`, preserves the lockfile, and rejects Poetry/Pipenv projects.
+- Background operations return a run ID. Poll `inspect_run`, then use `inspect_events` (including `kind: "trial"`), `inspect_metrics`, and `inspect_trace`. A launched job is not a completed job.
+- Raw dataset examples, category values, and generated responses require workflow permission. Read-only inspection exposes schema and model summaries. Protected credential paths are excluded from agent dataset operations; filename filtering does not identify every possible secret in user-created data.
+- Cancellation through the agent only affects runs started by that credential. Revocation stops its active recorded jobs; synchronous inspections or predictions already in progress may finish.
+
+Example instruction: “Use aiide to create a scikit-learn project, install its locked environment, use the Iris sample, compare SVM and logistic regression with three-fold macro F1, explain failed trials, fit the best configuration, and predict the sample. Report measured validation results separately from final-fit results.” For a new project the agent returns its folder for opening before continuing. A client with native file tools can additionally prepare custom datasets or source files under that client's own permissions.
+
+For fine-tuning: “Inspect the Hub environment, download Qwen/Qwen3-0.6B, run one LoRA step on data/train.jsonl, reload the adapter, generate a response, and inspect any failure before retrying.” Hub operations use public models and the project's installed environment; research access is provided by the coding client's own web tools, while the IDE supplies execution evidence.

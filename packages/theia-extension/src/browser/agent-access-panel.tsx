@@ -13,7 +13,8 @@ export function AgentAccessPanel({
     [setup, setSetup] = React.useState<any>(),
     [sessions, setSessions] = React.useState<any[]>([]),
     [review, setReview] = React.useState<any>(),
-    [installed, setInstalled] = React.useState<any>();
+    [installed, setInstalled] = React.useState<any>(),
+    [loadError, setLoadError] = React.useState('');
   React.useEffect(() => {
     let active = true,
       pending = false;
@@ -26,11 +27,13 @@ export function AgentAccessPanel({
           call('mcp.sessions'),
         ]);
         if (active) {
+          setLoadError('');
           setSetup(s);
           setSessions(list);
         }
-      } catch {
-        /* Explicit actions surface errors through perform. */
+      } catch (error) {
+        if (active)
+          setLoadError(`Could not refresh agent access: ${String(error)}`);
       } finally {
         pending = false;
       }
@@ -47,6 +50,7 @@ export function AgentAccessPanel({
   return (
     <section className="aiide-card" data-testid="agent-access-panel">
       <h3>External agent access</h3>
+      {loadError && <p role="alert">{loadError}</p>}
       <p>
         Connect Codex, Claude Code, or another MCP client running on this
         machine. Keep this workspace open while the agent works.
@@ -58,8 +62,18 @@ export function AgentAccessPanel({
           <option value="work">
             Read, staged edits, and container commands
           </option>
+          <option value="workflow">
+            Local setup, training, and inference + staged edits
+          </option>
         </select>
       </label>
+      {access === 'workflow' && (
+        <p className="aiide-note">
+          Allows built-in local setup, package and model downloads, training,
+          and inference. Jobs are tracked in Runs. This does not grant an
+          arbitrary host shell or automatic source application.
+        </p>
+      )}
       <div className="aiide-toolbar">
         <button
           onClick={() =>
@@ -67,7 +81,11 @@ export function AgentAccessPanel({
               setGrant(
                 await call('mcp.issue', {
                   scopes:
-                    access === 'read' ? ['read'] : ['read', 'edit', 'execute'],
+                    access === 'read'
+                      ? ['read']
+                      : access === 'workflow'
+                        ? ['read', 'edit', 'execute', 'workflow']
+                        : ['read', 'edit', 'execute'],
                 }),
               ),
             )
@@ -96,7 +114,12 @@ export function AgentAccessPanel({
           </label>
           <label>
             Bearer token
-            <input readOnly type="password" value={grant.token} />
+            <input
+              readOnly
+              type="password"
+              autoComplete="off"
+              value={grant.token}
+            />
           </label>
           <button onClick={() => copy(grant.token)}>Copy token</button>
           <p>

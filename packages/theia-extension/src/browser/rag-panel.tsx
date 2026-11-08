@@ -126,7 +126,7 @@ export function RagPanel({
       </section>
       <div className="aiide-columns">
         <section className="aiide-card">
-          <h3>Ingest a document</h3>
+          <h3>1. Ingest a document</h3>
           <label>
             Workspace file (.txt or .md)
             <input
@@ -247,7 +247,7 @@ export function RagPanel({
         </section>
       </div>
       <section className="aiide-card">
-        <h3>Evaluate your RAG pipeline</h3>
+        <h3>3. Evaluate your RAG pipeline</h3>
         <div className="aiide-form-grid">
           <label>
             Dataset file (JSONL)
@@ -292,7 +292,7 @@ export function RagPanel({
       {result && (
         <section className="aiide-card">
           <div className="aiide-row">
-            <h3>Results</h3>
+            <h3 role="status">Results ready</h3>
             <button onClick={() => attach(result)}>Attach to assistant</button>
           </div>
           {result.answer && <p className="aiide-answer">{result.answer}</p>}

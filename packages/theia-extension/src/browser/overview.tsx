@@ -79,7 +79,8 @@ export function Overview({
   const pickTemplate = (id: string) => {
     setTemplate(id);
     setName(`my-${id}-project`);
-    createRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    createRef.current?.scrollIntoView({ block: 'start' });
+    createRef.current?.querySelector<HTMLInputElement>('input')?.focus();
   };
 
   const models = connections.filter((c) => c.kind === 'model');
@@ -276,6 +277,7 @@ export function Overview({
                     />
                     <button
                       className="aiide-link"
+                      aria-label={`${s.label}: ${s.done ? 'complete' : 'not complete'}`}
                       onClick={() =>
                         s.template ? pickTemplate(s.template) : go(s.tab!)
                       }
@@ -324,6 +326,7 @@ export function Overview({
                 <small>{duration((r.ended || Date.now()) - r.started)}</small>
                 <button
                   className="aiide-subtle"
+                  aria-label={`Trace for ${r.name}`}
                   onClick={() => openTrace(r.id)}
                 >
                   Trace ↗
@@ -356,12 +359,15 @@ export function Overview({
           Every template ships with tracing, an evaluation example, and a
           locked, isolated Python environment.
         </p>
-        <div className="aiide-templates" role="radiogroup">
+        <div
+          className="aiide-templates"
+          role="group"
+          aria-label="Project template"
+        >
           {templates.map((t) => (
             <button
               key={t.id}
-              role="radio"
-              aria-checked={template === t.id}
+              aria-pressed={template === t.id}
               className="aiide-template"
               onClick={() => {
                 setTemplate(t.id);

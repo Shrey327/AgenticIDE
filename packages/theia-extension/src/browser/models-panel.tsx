@@ -72,7 +72,11 @@ export function ModelsPanel({
       <div className="aiide-columns">
         <section className="aiide-card">
           <h3>Add a model connection</h3>
-          <div className="aiide-chips" aria-label="Endpoint presets">
+          <div
+            className="aiide-chips"
+            role="group"
+            aria-label="Endpoint presets"
+          >
             {presets.map((p) => (
               <button
                 key={p.id}
@@ -114,6 +118,7 @@ export function ModelsPanel({
           </label>
           <button
             className="aiide-primary"
+            disabled={!id.trim() || !url.trim() || !model.trim()}
             onClick={() =>
               void perform(async () => {
                 await call('connections.save', {
@@ -272,8 +277,8 @@ function Playground({
     [messages, setMessages] = React.useState<Message[]>([]),
     [pending, setPending] = React.useState(false);
   React.useEffect(() => {
-    if (!model && models[0]) setModel(models[0].id);
-  }, [models.length]);
+    if (!models.some((c) => c.id === model)) setModel(models[0]?.id || '');
+  }, [connections, model]);
   const connection = models.find((c) => c.id === model);
   const send = () => {
     if (!model || !prompt.trim() || pending) return;
@@ -325,14 +330,22 @@ function Playground({
     });
   };
   return (
-    <section className="aiide-card aiide-playground">
+    <section
+      className="aiide-card aiide-playground"
+      aria-label="Inference playground"
+      aria-busy={pending}
+    >
       <div className="aiide-row">
         <h3>
           <i className="codicon codicon-comment-discussion" /> Inference
           playground
         </h3>
         {messages.length > 0 && (
-          <button className="aiide-subtle" onClick={() => setMessages([])}>
+          <button
+            className="aiide-subtle"
+            disabled={pending}
+            onClick={() => setMessages([])}
+          >
             <i className="codicon codicon-clear-all" /> New chat
           </button>
         )}
@@ -341,7 +354,8 @@ function Playground({
         <p>Add a model connection below to start sending prompts.</p>
       ) : (
         <>
-          <div className="aiide-playground-controls">
+          <fieldset className="aiide-playground-controls" disabled={pending}>
+            <legend className="aiide-sr-only">Generation settings</legend>
             <ConnectionSelect
               label="Model"
               connections={connections}
@@ -372,18 +386,25 @@ function Playground({
                 onChange={(e) => setMaxTokens(e.target.value)}
               />
             </label>
-          </div>
+          </fieldset>
           <details>
             <summary>System prompt {system && '· set'}</summary>
             <textarea
               rows={3}
+              aria-label="System prompt"
+              disabled={pending}
               value={system}
               onChange={(e) => setSystem(e.target.value)}
               placeholder="You are a helpful assistant…"
             />
           </details>
           {messages.length > 0 && (
-            <div className="aiide-chat" aria-live="polite">
+            <div
+              className="aiide-chat"
+              role="log"
+              aria-label="Conversation"
+              aria-live="polite"
+            >
               {messages.map((m, i) => (
                 <div key={i} className={`aiide-message ${m.role}`}>
                   <small>{m.role === 'user' ? 'You' : m.stats?.model}</small>
@@ -426,7 +447,9 @@ function Playground({
               {pending && (
                 <div className="aiide-message assistant">
                   <small>{connection?.model || model}</small>
-                  <pre className="aiide-muted">Generating…</pre>
+                  <pre className="aiide-muted" role="status">
+                    Generating…
+                  </pre>
                 </div>
               )}
             </div>
@@ -434,6 +457,7 @@ function Playground({
           <div className="aiide-composer">
             <textarea
               rows={2}
+              disabled={pending}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={(e) => {

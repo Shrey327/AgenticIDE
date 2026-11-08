@@ -38,6 +38,7 @@ export function TracePanel({
   React.useEffect(() => {
     setPage(0);
     setSpan(undefined);
+    setData({ total: 0, items: [] });
   }, [run?.id]);
   React.useEffect(() => {
     if (!run) return;
@@ -111,6 +112,8 @@ export function TracePanel({
                 <button
                   key={s.traceId + s.spanId}
                   className={`aiide-span ${span?.spanId === s.spanId ? 'selected' : ''}`}
+                  aria-pressed={span?.spanId === s.spanId}
+                  aria-label={`${s.name}, ${s.status}, ${Math.max(0, s.end - s.start)} milliseconds`}
                   onClick={() => setSpan(s)}
                 >
                   <span style={{ paddingLeft: depth(s) * 14 }}>
@@ -119,7 +122,7 @@ export function TracePanel({
                     />{' '}
                     {s.name}
                   </span>
-                  <span className="aiide-waterfall">
+                  <span className="aiide-waterfall" aria-hidden="true">
                     <span
                       style={{
                         marginLeft: `${((s.start - start) / Math.max(1, end - start)) * 85}%`,

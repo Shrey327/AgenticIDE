@@ -1,0 +1,4 @@
+{"text":"A classification model predicts a category from input features."}
+{"text":"Support vector machines classify examples using a separating boundary."}
+{"text":"Keep a held-out test set to measure performance on new examples."}
+{"text":"Use cross-validation to compare hyperparameters without leaking the test data."}

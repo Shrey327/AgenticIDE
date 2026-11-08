@@ -2,7 +2,7 @@ import json
 import os
 import sys
 
-from . import catalog, final, inspect, predict, sweep
+from . import catalog, final, inspect, predict, sample, sweep
 
 mode = sys.argv[1] if len(sys.argv) > 1 else ""
 if mode in ("sweep", "final"):
@@ -12,10 +12,10 @@ if mode in ("sweep", "final"):
     except Exception as error:
         print(f"Experiment lab error: {error}", file=sys.stderr, flush=True)
         sys.exit(1)
-elif mode in ("catalog", "inspect", "predict"):
+elif mode in ("catalog", "inspect", "predict", "sample"):
     try:
         request = json.loads(sys.stdin.read() or "{}")
-        result = {"catalog": catalog, "inspect": inspect, "predict": predict}[mode](request)
+        result = {"catalog": catalog, "inspect": inspect, "predict": predict, "sample": sample}[mode](request)
         print(json.dumps({"ok": True, "result": result}, allow_nan=False, default=str))
     except Exception as error:
         print(json.dumps({"ok": False, "error": f"{error}"}))

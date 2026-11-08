@@ -51,6 +51,11 @@ export function RunsPanel({
       (!search || r.name.toLowerCase().includes(search.toLowerCase())),
   );
   React.useEffect(() => {
+    setEvents([]);
+    setSummary(undefined);
+    setComparison(undefined);
+  }, [selected]);
+  React.useEffect(() => {
     let active = true;
     if (selected)
       void perform(async () => {
@@ -137,17 +142,25 @@ export function RunsPanel({
       ) : (
         <div className="aiide-columns wide-left">
           <div className="aiide-table-wrap">
-            <table>
+            <table aria-label="Recorded runs">
               <thead>
                 <tr>
                   <th>Run</th>
                   <th>Status</th>
                   <th>Started</th>
                   <th>Duration</th>
-                  <th />
+                  <th scope="col">Actions</th>
                 </tr>
               </thead>
               <tbody>
+                {!visible.length && (
+                  <tr>
+                    <td colSpan={5}>
+                      No runs match these filters. Clear the search or choose
+                      All.
+                    </td>
+                  </tr>
+                )}
                 {visible.map((run) => (
                   <tr
                     key={run.id}
@@ -156,6 +169,7 @@ export function RunsPanel({
                     <td>
                       <button
                         className="aiide-link"
+                        aria-pressed={selected === run.id}
                         onClick={() => select(run.id)}
                       >
                         {run.name}
@@ -173,12 +187,14 @@ export function RunsPanel({
                     <td>
                       <button
                         className="aiide-subtle"
+                        aria-label={`Trace for ${run.name}`}
                         onClick={() => inspect(run.id)}
                       >
                         Trace ↗
                       </button>
                       {run.status === 'running' && (
                         <button
+                          aria-label={`Stop ${run.name}`}
                           onClick={() =>
                             void perform(async () => {
                               await call('runs.cancel', { id: run.id });

@@ -89,7 +89,7 @@ export function AssistantPanel({
           <div className="aiide-toolbar">
             <button
               className="aiide-primary"
-              disabled={!model || !prompt || chat?.status === 'running'}
+              disabled={!model || !prompt.trim() || chat?.status === 'running'}
               onClick={() =>
                 void perform(async () => {
                   setReview(undefined);
@@ -97,7 +97,8 @@ export function AssistantPanel({
                     await call('assistant.start', {
                       model,
                       prompt,
-                      autonomous,
+                      autonomous:
+                        autonomous && Boolean(current?.capabilities?.tools),
                       context,
                     }),
                   );
@@ -133,10 +134,12 @@ export function AssistantPanel({
           )}
           {chat && (
             <div className="aiide-response">
-              <span className={`aiide-badge ${chat.status}`}>
+              <span className={`aiide-badge ${chat.status}`} role="status">
                 {chat.status}
               </span>
-              <pre>{chat.text || 'Waiting for the model…'}</pre>
+              <pre tabIndex={0} aria-label="Assistant response">
+                {chat.text || 'Waiting for the model…'}
+              </pre>
               {chat.actions?.map((a: any, i: number) => (
                 <div className="aiide-action" key={i}>
                   {a.tool} <span>{a.status}</span>
@@ -205,7 +208,15 @@ export function AssistantPanel({
               Cancel command
             </button>
           </div>
-          {terminal && <pre className="aiide-terminal">{terminal}</pre>}
+          {terminal && (
+            <pre
+              className="aiide-terminal"
+              tabIndex={0}
+              aria-label="Container command output"
+            >
+              {terminal}
+            </pre>
+          )}
           <button
             disabled={!session}
             onClick={() =>

@@ -21,3 +21,4 @@ resources/plugins/
 !resources/otelcol.README.md
 
 apps/*/gen-esbuild.*.mjs
+artifacts/qwen-smoke/

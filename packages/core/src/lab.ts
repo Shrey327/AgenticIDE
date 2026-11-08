@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { z } from 'zod';
 import { loadProject } from './project';
 import { Runs } from './runs';
@@ -92,6 +93,12 @@ export class Lab {
   catalog() {
     return this.call('catalog', {});
   }
+  async sample() {
+    const data = (await this.call('sample', {})) as { csv: string };
+    const file = `iris-sample-${crypto.randomUUID().slice(0, 8)}.csv`;
+    fs.writeFileSync(within(this.root, file, true), data.csv, { flag: 'wx' });
+    return { file };
+  }
   files() {
     const found: { file: string; bytes: number }[] = [];
     const walk = (directory: string, depth: number) => {
@@ -155,7 +162,10 @@ export class Lab {
       .flatMap((e) => {
         try {
           const meta = JSON.parse(
-            fs.readFileSync(path.join(directory, e.name, 'model.json'), 'utf8'),
+            fs.readFileSync(
+              within(this.root, `models/${e.name}/model.json`),
+              'utf8',
+            ),
           );
           return meta.format === 'aiide-lab-v1'
             ? [{ ...meta, path: `models/${e.name}` }]
@@ -169,6 +179,8 @@ export class Lab {
   predict(input: unknown) {
     const args = predictSchema.parse(input);
     const model = within(this.root, args.model);
+    within(this.root, `${args.model}/model.joblib`);
+    within(this.root, `${args.model}/model.json`);
     if (!fs.existsSync(path.join(model, 'model.json')))
       throw new Error('Choose a model trained in the Experiment lab');
     if (!args.file)

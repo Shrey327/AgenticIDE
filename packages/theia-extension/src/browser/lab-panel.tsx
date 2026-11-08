@@ -30,7 +30,7 @@ const defaults: Record<
   classification: {
     metrics: ['accuracy', 'f1', 'roc_auc'],
     primary: 'f1',
-    models: ['logistic', 'random_forest', 'hist_gradient_boosting'],
+    models: ['logistic', 'svm', 'random_forest'],
   },
 };
 const values = (text: string) => [
@@ -78,6 +78,7 @@ export function LabPanel({
     [randomTrials, setRandomTrials] = React.useState(20),
     [sweepId, setSweepId] = React.useState(''),
     [models, setModels] = React.useState<any[]>([]);
+  const selection = React.useRef(0);
 
   const reloadModels = React.useCallback(
     async () => setModels(await call('lab.models')),
@@ -114,8 +115,10 @@ export function LabPanel({
     perform(async () => {
       setFile(next);
       setProfile(undefined);
+      const request = ++selection.current;
       if (!next) return;
       const p = await call('lab.inspect', { file: next });
+      if (request !== selection.current) return;
       setProfile(p);
       setTarget(p.target);
       setExcluded([]);
@@ -139,6 +142,27 @@ export function LabPanel({
   const features = (profile?.columns || [])
     .map((c: any) => c.name)
     .filter((n: string) => n !== target && !excluded.includes(n));
+  const problem = !features.length
+    ? 'Select at least one feature.'
+    : !metrics.length
+      ? 'Select at least one metric.'
+      : !planned || planned > 200 || !Number.isInteger(planned)
+        ? 'Choose between 1 and 200 trials. Use random search to limit a large grid.'
+        : validation.type === 'kfold' &&
+            (!Number.isInteger(validation.folds) ||
+              validation.folds < 2 ||
+              validation.folds > 10)
+          ? 'Choose between 2 and 10 folds.'
+          : validation.type === 'holdout' &&
+              (validation.test_size < 0.05 || validation.test_size > 0.5)
+            ? 'Choose a holdout size between 5% and 50%.'
+            : Object.keys(chosen).some((id) =>
+                  Object.keys(spec?.models[id]?.params || {}).some(
+                    (p) => !values(grid(id, p)).length,
+                  ),
+                )
+              ? 'Enter at least one value for every selected hyperparameter.'
+              : '';
 
   const config = (): Config => ({
     file,
@@ -168,7 +192,10 @@ export function LabPanel({
       setExcluded(
         p.columns
           .map((col: any) => col.name)
-          .filter((n: string) => n !== c.target && !c.features?.includes(n)),
+          .filter(
+            (n: string) =>
+              n !== c.target && c.features && !c.features.includes(n),
+          ),
       );
       setValidation(c.validation);
       setMetrics(c.metrics);
@@ -192,7 +219,7 @@ export function LabPanel({
       />
       {!catalog ? (
         <section className="aiide-card">
-          <p>
+          <p role="status">
             <i className="codicon codicon-loading codicon-modifier-spin" />{' '}
             Checking this project's Python environment… The first check can take
             a little while after a fresh install.
@@ -204,6 +231,30 @@ export function LabPanel({
             <i className="codicon codicon-warning" /> The lab can't start yet
           </h3>
           <p>{catalog.error}</p>
+          <div className="aiide-toolbar">
+            <button
+              onClick={() =>
+                void perform(async () => {
+                  const run = await call('environment.setup');
+                  await refresh();
+                  openTrace(run.id);
+                })
+              }
+            >
+              Set up locked environment
+            </button>
+            <button
+              onClick={() =>
+                void perform(async () => setCatalog(await call('lab.catalog')))
+              }
+            >
+              Check environment again
+            </button>
+          </div>
+          <p className="aiide-note">
+            Setup installs this project's locked dependencies. For a new
+            project, choose the scikit-learn template on Home first.
+          </p>
         </section>
       ) : (
         <div className="aiide-lab-setup">
@@ -213,6 +264,30 @@ export function LabPanel({
               title="Data"
               text="Pick a dataset and what to predict."
             />
+            <div className="aiide-toolbar">
+              <button
+                onClick={() =>
+                  void perform(async () => {
+                    const sample = await call('lab.sample');
+                    setFiles(await call('lab.files'));
+                    await choose(sample.file);
+                  })
+                }
+              >
+                Try Iris classification sample
+              </button>
+              <button
+                onClick={() =>
+                  void perform(async () => setFiles(await call('lab.files')))
+                }
+              >
+                Refresh datasets
+              </button>
+              <small>
+                Creates a local sample with 150 flowers and three species. No
+                download needed.
+              </small>
+            </div>
             {!files.length ? (
               <p>
                 No CSV files found in this workspace. Add one (for example{' '}
@@ -235,7 +310,7 @@ export function LabPanel({
                     value={file}
                     onChange={(e) => void choose(e.target.value)}
                   >
-                    <option value="">Choose a CSV file</option>
+                    <option value="">Choose a CSV or TSV file</option>
                     {files.map((f) => (
                       <option key={f.file} value={f.file}>
                         {f.file} · {(f.bytes / 1024).toFixed(0)} KB
@@ -281,7 +356,11 @@ export function LabPanel({
                 <small className="aiide-muted">
                   Features · click to exclude ({features.length} used)
                 </small>
-                <div className="aiide-chips aiide-columns-list">
+                <div
+                  className="aiide-chips aiide-columns-list"
+                  role="group"
+                  aria-label="Included features"
+                >
                   {profile.columns
                     .filter((c: any) => c.name !== target)
                     .map((c: any) => (
@@ -305,14 +384,25 @@ export function LabPanel({
                       </button>
                     ))}
                 </div>
+                <p className="aiide-note">
+                  Missing numeric values are filled, categories encoded, and SVM
+                  / linear inputs scaled automatically within each training
+                  fold. Remove identifiers and columns that would not be
+                  available when predicting.
+                  {profile.columns.find((c: any) => c.name === target)
+                    ?.missing > 0 &&
+                    ` ${profile.columns.find((c: any) => c.name === target).missing} rows without a target will be excluded.`}
+                </p>
                 <details>
                   <summary>Preview first rows</summary>
                   <div className="aiide-table-wrap">
-                    <table>
+                    <table aria-label="Dataset preview">
                       <thead>
                         <tr>
                           {profile.columns.map((c: any) => (
-                            <th key={c.name}>{c.name}</th>
+                            <th key={c.name} scope="col">
+                              {c.name}
+                            </th>
                           ))}
                         </tr>
                       </thead>
@@ -391,7 +481,11 @@ export function LabPanel({
                   )}
                 </div>
                 <small className="aiide-muted">Metrics</small>
-                <div className="aiide-chips">
+                <div
+                  className="aiide-chips"
+                  role="group"
+                  aria-label="Evaluation metrics"
+                >
                   {Object.entries(spec.metrics).map(([id, m]: any) => (
                     <button
                       key={id}
@@ -422,6 +516,14 @@ export function LabPanel({
                     ))}
                   </select>
                 </label>
+                <p className="aiide-note">
+                  {task === 'classification'
+                    ? 'Classification splits preserve class proportions. F1 macro gives each class equal weight. '
+                    : ''}
+                  These splits assume independent rows. Time series and repeated
+                  measurements need a time-aware or grouped evaluation outside
+                  this lab.
+                </p>
               </section>
 
               <section className="aiide-card">
@@ -533,12 +635,8 @@ export function LabPanel({
                 </span>
                 <button
                   className="aiide-primary"
-                  disabled={
-                    !planned ||
-                    planned > 200 ||
-                    !metrics.length ||
-                    !features.length
-                  }
+                  disabled={Boolean(problem)}
+                  aria-describedby={problem ? 'lab-validation' : undefined}
                   onClick={() =>
                     void perform(async () => {
                       const run = await call('lab.sweep', { config: config() });
@@ -552,6 +650,11 @@ export function LabPanel({
                 >
                   <i className="codicon codicon-run-all" /> Run sweep
                 </button>
+                {problem && (
+                  <p id="lab-validation" role="status">
+                    {problem}
+                  </p>
+                )}
               </section>
             </>
           )}
@@ -637,7 +740,11 @@ function Leaderboard({
   if (!sweeps.length) return null;
   const config = sweep?.lab?.config as Config | undefined;
   const metricSpec = config && catalog?.tasks?.[config.task]?.metrics;
-  const higher = metricSpec?.[config!.primary]?.higher ?? false;
+  const higher =
+    metricSpec?.[config!.primary]?.higher ??
+    ['r2', 'accuracy', 'f1', 'precision', 'recall', 'roc_auc'].includes(
+      config?.primary || '',
+    );
   const done = trials.filter((t) => t.status === 'completed');
   const ranked = [...done].sort((a, b) =>
     higher
@@ -697,7 +804,7 @@ function Leaderboard({
       {sweep && config && (
         <>
           <div className="aiide-toolbar">
-            <span>
+            <span role="status">
               <span className={`aiide-badge ${sweep.status}`}>
                 {sweep.status}
               </span>{' '}
@@ -730,7 +837,14 @@ function Leaderboard({
             </button>
           </div>
           {sweep.status === 'running' && total > 0 && (
-            <div className="aiide-progress">
+            <div
+              className="aiide-progress"
+              role="progressbar"
+              aria-label="Sweep trials completed"
+              aria-valuemin={0}
+              aria-valuemax={total}
+              aria-valuenow={trials.length}
+            >
               <span style={{ width: `${(trials.length / total) * 100}%` }} />
             </div>
           )}
@@ -742,7 +856,10 @@ function Leaderboard({
           )}
           {ranked.length > 0 && (
             <div className="aiide-table-wrap">
-              <table className="aiide-leader">
+              <table
+                className="aiide-leader"
+                aria-label="Model comparison leaderboard"
+              >
                 <thead>
                   <tr>
                     <th>#</th>
@@ -804,10 +921,13 @@ function Leaderboard({
                         <td>{duration(t.fit_seconds * 1000)}</td>
                         <td>
                           {trained[t.trial] ? (
-                            <small>training…</small>
+                            <button onClick={() => openTrace(trained[t.trial])}>
+                              View final run
+                            </button>
                           ) : (
                             <button
                               className={i === 0 ? 'aiide-primary' : ''}
+                              aria-label={`Train final ${t.label}, trial ${t.trial}`}
                               onClick={() => void train(t)}
                             >
                               Train final
@@ -844,9 +964,10 @@ function Leaderboard({
             </div>
           )}
           <p className="aiide-note">
-            Train vs val: how much better the model scores on its training folds
-            than on held-out data. Under 20% is typical; above 50% means it is
-            memorising the training data.
+            Train vs val is a relative score gap, a clue to investigate
+            overfitting. Its size depends on the metric and dataset; the labels
+            are heuristics. Sweep scores select candidates. Check the final
+            choice on untouched test data before deployment.
           </p>
         </>
       )}
@@ -911,7 +1032,7 @@ function Inference({
           </span>
           {Object.entries(model.scores || {}).map(([k, v]: any) => (
             <code key={k}>
-              CV {k} {fmt(v)}
+              Validation {k} {fmt(v)}
             </code>
           ))}
         </div>

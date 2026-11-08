@@ -64,3 +64,48 @@ test('standard MCP client discovers scoped diagnostics, pages events, and cannot
   await call(full,'close_session',{session:session.id}); assert.equal(endpoint.sessions().length,0);
   await endpoint.revoke(); await assert.rejects(call(read,'get_workspace'));
 });
+
+test('local workflows require an explicit scope, enforce an operation allowlist, and cancel only owned jobs', async t => {
+  const root = temporary(t), store = new Store(path.join(root, 'db.sqlite'));
+  const sandbox = new Sandbox(root, path.join(root, '.aiide/sessions'), store);
+  const calls = [];
+  const endpoint = new McpEndpoint(sandbox, store, async (operation, args) => {
+    calls.push({ operation, args });
+    if (operation === 'lab.inspect') return { file: args.file, rows: 1, sample: [['private']], columns: [{ name: 'category', type: 'categorical', missing: 0, unique: 1, values: ['private'] }] };
+    if (operation === 'lab.models') return [{ path: 'models/classifier', name: 'classifier', example: { category: 'private' }, classes: ['private'], features: [{ name: 'category', type: 'categorical', values: ['private'] }] }];
+    if (operation === 'lab.sweep') {
+      const run = { id: 'owned-run', project: 'fixture', name: 'sweep', status: 'running', started: Date.now(), command: [], source: '', environment: {}, configuration: {} };
+      store.saveRun(run); return run;
+    }
+    if (operation === 'runs.cancel') store.saveRun({ ...store.run(args.id), status: 'cancelled' });
+    return { operation };
+  });
+  await endpoint.start(); t.after(async () => { await endpoint.stop(); store.close(); });
+  const staged = await client(t, endpoint, ['read', 'edit', 'execute']);
+  const workflow = await client(t, endpoint, ['read', 'workflow']);
+  assert.ok(!(await staged.listTools()).tools.some(tool => tool.name === 'run_workflow'));
+  assert.equal((await staged.callTool({ name: 'run_workflow', arguments: { operation: 'environment.setup' } })).isError, true);
+  const tool = (await workflow.listTools()).tools.find(tool => tool.name === 'run_workflow');
+  assert.equal(tool.annotations.readOnlyHint, false); assert.equal(tool.annotations.openWorldHint, true);
+  assert.equal((await call(workflow, 'get_workspace')).execution.localWorkflows, true);
+  await call(staged, 'inspect_workflow', { operation: 'workflows.catalog' });
+  assert.equal((await workflow.callTool({ name: 'run_workflow', arguments: { operation: 'sandbox.apply', args: {} } })).isError, true);
+  assert.equal((await workflow.callTool({ name: 'run_workflow', arguments: { operation: 'project.save', args: {} } })).isError, true);
+  assert.equal((await staged.callTool({ name: 'inspect_workflow', arguments: { operation: 'hf.train' } })).isError, true);
+  assert.equal((await workflow.callTool({ name: 'run_workflow', arguments: { operation: 'runs.cancel', args: { id: 'someone-else' } } })).isError, true);
+  assert.deepEqual(calls.map(call => call.operation), ['workflows.catalog']);
+  fs.writeFileSync(path.join(root, 'secrets.csv'), 'token\nprivate\n');
+  fs.writeFileSync(path.join(root, 'data.csv'), 'category\nprivate\n');
+  assert.equal((await staged.callTool({ name: 'inspect_workflow', arguments: { operation: 'lab.inspect', file: 'secrets.csv' } })).isError, true);
+  assert.equal((await staged.callTool({ name: 'inspect_workflow', arguments: { operation: 'hf.result', file: '.aiide/hf-results/test.json' } })).isError, true);
+  const schema = await call(staged, 'inspect_workflow', { operation: 'lab.inspect', file: 'data.csv' });
+  assert.equal(schema.sample, undefined); assert.equal(schema.columns[0].values, undefined);
+  assert.deepEqual((await call(workflow, 'inspect_workflow', { operation: 'lab.inspect', file: 'data.csv' })).sample, [['private']]);
+  const modelInfo = (await call(staged, 'inspect_workflow', { operation: 'lab.models' }))[0];
+  assert.equal(modelInfo.example, undefined); assert.equal(modelInfo.classes, undefined);
+  assert.deepEqual(modelInfo.features, [{ name: 'category', type: 'categorical' }]);
+  await call(workflow, 'run_workflow', { operation: 'lab.sweep', args: { config: { task: 'classification' } } });
+  await endpoint.revoke();
+  assert.equal(store.run('owned-run').status, 'cancelled');
+  await assert.rejects(call(workflow, 'get_workspace'));
+});

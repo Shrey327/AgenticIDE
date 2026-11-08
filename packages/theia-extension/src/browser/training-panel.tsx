@@ -31,6 +31,8 @@ export function TrainingPanel({
     [profile, setProfile] = React.useState(''),
     [profiles, setProfiles] = React.useState<any[]>([]);
   const [parameters, setParameters] = React.useState('{}'),
+    [launching, setLaunching] = React.useState(false),
+    [loadError, setLoadError] = React.useState(''),
     [modelPath, setModelPath] = React.useState(''),
     [datasetPath, setDatasetPath] = React.useState(''),
     [resumeFrom, setResumeFrom] = React.useState<{
@@ -55,10 +57,14 @@ export function TrainingPanel({
       pending = false;
     setArtifact(undefined);
     setDownload('');
+    setEvents([]);
+    setMetrics([]);
+    setCompareMetrics([]);
+    setLoadError('');
     const load = async () => {
       if (pending || !selected) return;
       pending = true;
-      await perform(async () => {
+      try {
         const [e, m, c] = await Promise.all([
           call('events.list', { runId: selected }),
           call('training.metrics', { id: selected }),
@@ -70,9 +76,13 @@ export function TrainingPanel({
           setEvents(e);
           setMetrics(m);
           setCompareMetrics(c);
+          setLoadError('');
         }
-      });
-      pending = false;
+      } catch (error) {
+        if (active) setLoadError(String(error));
+      } finally {
+        pending = false;
+      }
     };
     void load();
     const timer = setInterval(() => void load(), 2000);
@@ -82,7 +92,9 @@ export function TrainingPanel({
     };
   }, [selected, comparison, call]);
   const run = runs.find((r) => r.id === selected),
-    names = [...new Set(metrics.map((e) => e.name))].slice(0, 50);
+    names = [
+      ...new Set([...metrics, ...compareMetrics].map((e) => e.name)),
+    ].slice(0, 50);
   const checkpoints = events.filter((e) =>
     ['artifact', 'checkpoint'].includes(e.kind),
   );
@@ -93,6 +105,11 @@ export function TrainingPanel({
         title="Training workspace"
         text="Launch experiments, follow learning curves, compare configurations, and resume verified checkpoints."
       />
+      <p className="aiide-note">
+        For model and dataset selection without code, use Train → Experiment lab
+        for tabular models, or Hugging Face & fine-tuning for language models.
+        This page runs your existing training commands locally or over SSH.
+      </p>
       <section className="aiide-card">
         <h3>
           Launch training · {project.config.training?.framework || 'custom'}
@@ -168,7 +185,7 @@ export function TrainingPanel({
           </label>
         </div>
         {resumeFrom && (
-          <p>
+          <p role="status">
             Resume from {resumeFrom.path} ·{' '}
             <button onClick={() => setResumeFrom(undefined)}>
               Clear resume
@@ -177,14 +194,29 @@ export function TrainingPanel({
         )}
         <button
           className="aiide-primary"
-          disabled={!command || (target === 'ssh' && !profile)}
-          onClick={() =>
+          disabled={launching || !command || (target === 'ssh' && !profile)}
+          onClick={() => {
+            setLaunching(true);
             void perform(async () => {
+              let parsed;
+              try {
+                parsed = JSON.parse(parameters);
+              } catch {
+                throw new Error(
+                  'Training parameters must be a JSON object, for example {"epochs": 3}',
+                );
+              }
+              if (
+                !parsed ||
+                Array.isArray(parsed) ||
+                typeof parsed !== 'object'
+              )
+                throw new Error('Training parameters must be a JSON object');
               const created = await call('training.start', {
                 name: command,
                 target,
                 profile: profile || undefined,
-                parameters: JSON.parse(parameters),
+                parameters: parsed,
                 modelPath: modelPath || undefined,
                 datasetPath: datasetPath || undefined,
                 resumeFrom,
@@ -192,10 +224,14 @@ export function TrainingPanel({
               select(created.id);
               setResumeFrom(undefined);
               await refresh();
-            })
-          }
+            }).finally(() => setLaunching(false));
+          }}
         >
-          {resumeFrom ? 'Launch resumed training' : 'Start training'}
+          {launching
+            ? 'Launching training…'
+            : resumeFrom
+              ? 'Launch resumed training'
+              : 'Start training'}
         </button>
         <p className="aiide-note">
           Remote jobs keep running when SSH or the IDE disconnects. Reconnect to
@@ -229,7 +265,7 @@ export function TrainingPanel({
       </div>
       {run && (
         <section className="aiide-card">
-          <h3>Job status: {run.status}</h3>
+          <h3 role="status">Job status: {run.status}</h3>
           {run.training?.profile && (
             <p>
               SSH: {run.training.connection} · remote:{' '}
@@ -292,10 +328,16 @@ export function TrainingPanel({
           )}
         </section>
       )}
-      {!metrics.length ? (
+      {loadError && (
+        <p role="alert">Unable to refresh training results: {loadError}</p>
+      )}
+      {!names.length ? (
         <Empty>
-          No training metrics received yet. Start an instrumented training
-          command to see its learning curves.
+          {run?.status === 'failed'
+            ? 'Training failed. Open this run in Runs to inspect its diagnostic events and logs before retrying.'
+            : !selected
+              ? 'Choose a run above to inspect its learning curves and checkpoints.'
+              : 'No training metrics received yet. Instrumented training commands report learning curves here.'}
         </Empty>
       ) : (
         <>
@@ -309,9 +351,11 @@ export function TrainingPanel({
               <section className="aiide-card" key={name}>
                 <small>{name}</small>
                 <h3>
-                  {Number(
-                    metrics.filter((e) => e.name === name).at(-1)?.value,
-                  ).toLocaleString(undefined, { maximumFractionDigits: 6 })}
+                  {metrics.some((e) => e.name === name)
+                    ? Number(
+                        metrics.filter((e) => e.name === name).at(-1)?.value,
+                      ).toLocaleString(undefined, { maximumFractionDigits: 6 })
+                    : 'Comparison only'}
                 </h3>
                 <MetricChart
                   values={metrics.filter((e) => e.name === name)}
@@ -329,6 +373,7 @@ export function TrainingPanel({
           <div key={e.id}>
             <strong>{e.name}</strong> · {String((e.value as any)?.path)}{' '}
             <button
+              aria-label={`Inspect ${e.name}`}
               onClick={() =>
                 void perform(async () => {
                   setArtifact(
@@ -370,6 +415,7 @@ export function TrainingPanel({
               )}
             {artifact.files && (
               <table>
+                <caption>Files in {artifact.path}</caption>
                 <thead>
                   <tr>
                     <th>File</th>
@@ -385,6 +431,7 @@ export function TrainingPanel({
                       <td>
                         {f.directory ? (
                           <button
+                            aria-label={`Browse ${f.name}`}
                             onClick={() =>
                               void perform(async () =>
                                 setArtifact(
@@ -400,6 +447,7 @@ export function TrainingPanel({
                           </button>
                         ) : (
                           <button
+                            aria-label={`${run?.training?.profile ? 'Download' : 'Locate'} ${f.name}`}
                             onClick={() =>
                               void perform(async () =>
                                 setDownload(

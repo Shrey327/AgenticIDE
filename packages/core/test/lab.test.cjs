@@ -41,6 +41,39 @@ test('lab finds workspace datasets but skips environments and models', (t) => {
   );
 });
 
+test('sample datasets are created without replacing existing data', async (t) => {
+  const { root, lab: l } = lab(t);
+  l.call = async () => ({ csv: 'length,species\n1,setosa\n' });
+  const first = await l.sample();
+  const second = await l.sample();
+  assert.notEqual(first.file, second.file);
+  assert.equal(
+    fs.readFileSync(path.join(root, first.file), 'utf8'),
+    'length,species\n1,setosa\n',
+  );
+  assert.equal(
+    fs.readFileSync(path.join(root, 'data/homes.csv'), 'utf8'),
+    'a,b\n1,2\n',
+  );
+});
+
+test('inference rejects model files linked outside the workspace', (t) => {
+  const { root, lab: l } = lab(t);
+  fs.mkdirSync(path.join(root, 'models', 'unsafe'));
+  fs.writeFileSync(
+    path.join(root, 'models', 'unsafe', 'model.json'),
+    '{"format":"aiide-lab-v1"}',
+  );
+  fs.symlinkSync(
+    '/etc/hosts',
+    path.join(root, 'models', 'unsafe', 'model.joblib'),
+  );
+  assert.throws(
+    () => l.predict({ model: 'models/unsafe', rows: [{ a: 1 }] }),
+    /Symbolic links/,
+  );
+});
+
 test('lab sweeps run as recorded IDE commands with validated config', async (t) => {
   const { lab: l, started } = lab(t);
   await l.sweep(sweep);

@@ -158,7 +158,7 @@ export function WandbPanel({
       {runs && (
         <>
           <div className="aiide-table-wrap">
-            <table>
+            <table aria-label="Weights and Biases runs">
               <thead>
                 <tr>
                   <th>Run</th>
@@ -167,6 +167,11 @@ export function WandbPanel({
                 </tr>
               </thead>
               <tbody>
+                {!runs.items.length && (
+                  <tr>
+                    <td colSpan={3}>No runs found in this W&B project.</td>
+                  </tr>
+                )}
                 {runs.items.map((r: any) => (
                   <tr
                     key={r.id}
@@ -176,6 +181,8 @@ export function WandbPanel({
                     <td>{r.state}</td>
                     <td>
                       <button
+                        aria-label={`Inspect W&B run ${r.name || r.id}`}
+                        aria-pressed={selected === r.id}
                         onClick={() =>
                           void perform(async () => {
                             setSelected(r.id);
@@ -260,6 +267,7 @@ export function WandbPanel({
             <section key={a.name}>
               <strong>{a.name}</strong> · {a.type} · {a.size ?? 'Unknown'} bytes
               <button
+                aria-label={`Browse W&B artifact ${a.name}`}
                 onClick={() =>
                   void perform(async () => {
                     setArtifact(a.name);

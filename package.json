@@ -29,7 +29,12 @@
     "test:training": "node scripts/test-training.mjs",
     "test:wandb": "node scripts/test-wandb.mjs",
     "test:training:ui": "node scripts/test-training-ui.mjs",
-    "test:agents": "node scripts/test-agent-access.mjs"
+    "test:agents": "node scripts/test-agent-access.mjs",
+    "test:usability": "node scripts/test-usability.mjs",
+    "test:workflows:ui": "node scripts/test-workflows-ui.mjs",
+    "test:workflows:agents": "node scripts/test-workflow-agents.mjs",
+    "test:huggingface": "node scripts/test-huggingface.mjs",
+    "test:huggingface:ui": "node scripts/test-huggingface-ui.mjs"
   },
   "devDependencies": {
     "@types/node": "22.15.30",

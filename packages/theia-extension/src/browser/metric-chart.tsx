@@ -8,8 +8,14 @@ export function MetricChart({
   values: EventRecord[];
   compare?: EventRecord[];
 }) {
-  const primary = values.filter((v) => Number.isFinite(Number(v.value))),
-    secondary = compare.filter((v) => Number.isFinite(Number(v.value)));
+  const primary = values.filter(
+      (v) =>
+        v.value != null && v.value !== '' && Number.isFinite(Number(v.value)),
+    ),
+    secondary = compare.filter(
+      (v) =>
+        v.value != null && v.value !== '' && Number.isFinite(Number(v.value)),
+    );
   // A single value has no curve; the card already shows it as a number.
   if (primary.length < 2 && secondary.length < 2) return null;
   const all = [...primary, ...secondary],
@@ -29,7 +35,7 @@ export function MetricChart({
     <svg
       viewBox="0 0 300 115"
       role="img"
-      aria-label={`${primary[0].name}: ${primary.length} samples, latest ${primary.at(-1)?.value}${secondary.length ? '; comparison shown dashed' : ''}`}
+      aria-label={`${all[0].name}: ${primary.length} primary samples, latest ${primary.at(-1)?.value ?? 'unavailable'}. Range ${low} to ${high}.${secondary.length ? ` Comparison: ${secondary.length} samples, latest ${secondary.at(-1)?.value}, shown dashed.` : ''}`}
     >
       <path d="M10 90H290" stroke="currentColor" opacity=".2" />
       <polyline

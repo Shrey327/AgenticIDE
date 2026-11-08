@@ -70,10 +70,17 @@ export function SettingsPanel({
             Named commands (JSON argument arrays)
             <textarea
               rows={7}
+              spellCheck={false}
+              aria-describedby="aiide-command-help"
               value={commands}
               onChange={(e) => setCommands(e.target.value)}
             />
           </label>
+          <p className="aiide-note" id="aiide-command-help">
+            Each command is a list of arguments, for example{' '}
+            {'{"train": ["python", "train.py"]}'}. Use Experiment lab for model
+            selection without writing a training script.
+          </p>
           <label className="aiide-checkbox">
             <input
               type="checkbox"

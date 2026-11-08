@@ -6,6 +6,7 @@ import { RagPanel } from './rag-panel.js';
 import { AssistantPanel } from './assistant-panel.js';
 import { TrainingPanel } from './training-panel.js';
 import { LabPanel } from './lab-panel.js';
+import { FinetunePanel } from './finetune-panel.js';
 import { SettingsPanel } from './settings-panel.js';
 import { AgentAccessPanel } from './agent-access-panel.js';
 import { Call, format, Heading } from './shared.js';
@@ -42,6 +43,12 @@ const nav: NavItem[] = [
   },
   { id: 'Agents', label: 'External agents', icon: 'plug', group: 'Build' },
   { id: 'Lab', label: 'Experiment lab', icon: 'graph-scatter', group: 'Train' },
+  {
+    id: 'Finetune',
+    label: 'Hugging Face & fine-tuning',
+    icon: 'hubot',
+    group: 'Train',
+  },
   { id: 'Training', label: 'Training jobs', icon: 'pulse', group: 'Train' },
   { id: 'Runs', label: 'Runs', icon: 'history', group: 'Observe' },
   { id: 'Traces', label: 'Traces', icon: 'list-tree', group: 'Observe' },
@@ -209,7 +216,10 @@ function Workbench({
     });
   const content = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
-    if (content.current) content.current.scrollTop = 0;
+    if (content.current) {
+      content.current.scrollTop = 0;
+      content.current.querySelector<HTMLElement>('main')?.focus();
+    }
   }, [tab]);
   const [opening, setOpening] = React.useState(autoOpen);
   React.useEffect(() => {
@@ -252,10 +262,11 @@ function Workbench({
       key={n.id}
       data-tab={n.id}
       title={n.label}
+      aria-label={n.label}
       aria-current={tab === n.id ? 'page' : undefined}
       onClick={() => setTab(n.id)}
     >
-      <i className={`codicon codicon-${n.icon}`} />
+      <i aria-hidden="true" className={`codicon codicon-${n.icon}`} />
       <span className="aiide-nav-label">{n.label}</span>
       {n.id === 'Runs' && running > 0 && (
         <span className="aiide-nav-count" title={`${running} running`}>
@@ -314,7 +325,12 @@ function Workbench({
       </aside>
       <div className="aiide-content" ref={content}>
         {error && <ErrorBanner error={error} clear={() => setError('')} />}
-        <main className="aiide-main" data-page={tab}>
+        <main
+          className="aiide-main"
+          data-page={tab}
+          tabIndex={-1}
+          aria-label={nav.find((n) => n.id === tab)?.label || tab}
+        >
           {tab === 'Overview' && (
             <Overview
               project={project}
@@ -391,7 +407,7 @@ function Workbench({
             <>
               <Heading
                 title="External coding agents"
-                text="Let Codex, Claude Code, or any MCP client inspect runs, traces, and logs, and propose staged edits you review."
+                text="Let Codex or Claude Code diagnose failures, prepare staged fixes, and run local setup, training, and inference with workflow permission."
               />
               <AgentAccessPanel call={call} perform={perform} />
             </>
@@ -415,6 +431,16 @@ function Workbench({
               select={setRunId}
               call={call}
               perform={perform}
+            />
+          )}
+          {tab === 'Finetune' && (
+            <FinetunePanel
+              call={call}
+              perform={perform}
+              runs={runs}
+              select={setRunId}
+              refresh={refresh}
+              openRun={openRun}
             />
           )}
           {tab === 'Settings' && (

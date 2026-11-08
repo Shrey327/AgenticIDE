@@ -110,7 +110,7 @@ export function TrainingConnections({
       </button>
       {result && (
         <>
-          <p>
+          <p role="status">
             {result.directoryExists && result.writable
               ? 'Project directory is writable'
               : 'Project directory is missing or not writable'}{' '}

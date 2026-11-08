@@ -82,13 +82,13 @@ Example evaluation case:
 
 ## Coding assistant and external agents
 
-**Codex and Claude Code:** open **Build → External agents** for scoped credentials, client launch commands, project guidance, and reviewable external-agent sessions. Agents can inspect runs, traces, logs, evaluations, and training metrics through MCP. See the [coding-agent guide](docs/coding-agents.md).
+**Codex and Claude Code:** open **Build → External agents** for scoped credentials, client launch commands, project guidance, and reviewable external-agent sessions. Agents can inspect runs, traces, logs, evaluations, and training metrics through MCP. With the separate **Local setup, training, and inference** permission, they can also create template projects, install locked environments, run model sweeps, download public Hub models, fine-tune, and predict. Jobs appear in Runs and can be cancelled; staged source edits still require review. See the [coding-agent guide](docs/coding-agents.md).
 
 **Assistant** supports selected-code context, attached traces/retrieval results, streaming responses, cancellation, and action history. Autonomous sessions use a staged source copy in a non-root Docker container. The root filesystem is read-only; the session has CPU, memory, PID, output, and time limits, no Docker socket, and no general network by default.
 
 Review the diff before **Apply changes**. Host files remain untouched until then; concurrent edits cause a conflict. The ordinary Theia terminal and configured project runs execute locally at the user's direction. Agent commands never fall back to host execution when Docker is absent. A manual agent-terminal command can receive a one-command network grant from the IDE; the autonomous assistant and external MCP tools cannot grant themselves network access.
 
-Settings can issue a revocable, eight-hour MCP bearer credential. Configure your client's Streamable HTTP transport with the shown loopback URL and `Authorization: Bearer <token>`. Scopes are `read`, `edit`, and `execute`; tools expose staged files, container commands, cancellation, runs, and traces. Credentials are workspace-specific and disappear on restart. Browser origins and invalid Host headers are rejected. Applying host changes is never an MCP tool.
+Settings can issue a revocable, eight-hour MCP bearer credential. Configure your client's Streamable HTTP transport with the shown loopback URL and `Authorization: Bearer <token>`. Scopes are `read`, `edit`, `execute`, and the separately granted `workflow`; tools expose staged files, container commands, cancellation, runs, and traces. Credentials are workspace-specific and disappear on restart. Browser origins and invalid Host headers are rejected. Applying host changes is never an MCP tool.
 
 Source staging excludes common credential files/directories, symlinks, binaries, and files larger than 2 MB, with a 50 MB/10,000-file cap. Do not rely on filename/pattern filtering to identify every possible secret in arbitrary source code. Containers also depend on the security of the Docker daemon and host.
 
@@ -96,14 +96,27 @@ Source staging excludes common credential files/directories, symlinks, binaries,
 
 **Train → Experiment lab** runs model and hyperparameter sweeps on any CSV in the workspace without writing code:
 
-1. **Data:** pick a CSV, choose the target column, and click feature chips to exclude columns. The task (regression or classification) is auto-detected and can be switched. Missing values are imputed and text columns one-hot encoded automatically.
+1. **Data:** pick a CSV (or choose **Try Iris classification sample**), choose the target column, and click feature chips to exclude columns. The task (regression or classification) is auto-detected and can be switched. Missing values are imputed and text columns one-hot encoded automatically.
 2. **Evaluation:** K-fold cross-validation or a holdout split; choose metrics (RMSE, MAE, R², MAPE / accuracy, F1, precision, recall, ROC AUC, log loss) and the one to rank by.
 3. **Models & hyperparameters:** tick candidates (linear/ridge/lasso or logistic, KNN, random forest, extra trees, gradient boosting, histogram gradient boosting, SVM, plus XGBoost/LightGBM when installed) and edit each hyperparameter as comma-separated values. Grid search tries every combination; random search samples N of them (max 200 trials).
 4. **Leaderboard:** trials stream in live with mean ± std per metric, a train-vs-validation gap (ok / watch / overfit), and fit time. **Tweak & re-run** restores a sweep's settings.
 5. **Train final** fits the chosen configuration on all rows and saves `models/<name>/model.joblib` (including preprocessing) with `model.json` metadata.
 6. **Try a trained model:** an input form generated from the model's features predicts instantly; **Batch predict a CSV** writes `predictions/<model>-<time>.csv`.
 
-Sweeps and final fits are ordinary recorded runs, so they also appear in Runs and Traces. The lab runs in the project's own Python environment and needs scikit-learn there (add the `sklearn` integration from Home if it is missing).
+Sweeps and final fits are ordinary recorded runs, so they also appear in Runs and Traces. The lab runs in the project's own Python environment and needs scikit-learn there. A new scikit-learn template includes a locked setup; the lab offers environment installation and rechecking when dependencies are missing. Existing projects can add the `sklearn` integration from Home. Invalid grids, insufficient class counts and failed trials show actionable errors; a sweep where every trial fails is marked failed.
+
+## Hugging Face downloads and no-code fine-tuning
+
+Open **Train → Hugging Face & fine-tuning**. Create a **Local PEFT fine-tuning** project from Home if needed, then install its locked environment from the Hub page.
+
+1. Download a public Transformers causal language model by repository ID, such as `Qwen/Qwen3-0.6B`. The IDE records the exact Hub commit and downloads safetensors without executing repository code.
+2. Select the downloaded base model and a workspace JSONL dataset containing `{"text":"training example"}` on each line. The template includes `data/train.jsonl` for a smoke test.
+3. Choose automatic hardware selection (CUDA, Apple MPS, then CPU), or an available device. Run a one-step smoke test, then adjust steps, learning rate, batch size, token length, and LoRA rank for a longer run.
+4. Select the saved adapter and generate a local response. Base weights stay intact; each run gets a separate output. Results survive navigation and run diagnostics are one click away.
+
+Downloads, training and generation are recorded, cancellable jobs. One Hub job runs at a time to avoid competing for memory. Generated text is saved under `.aiide/hf-results` for the page, separately from telemetry capture settings. This flow currently supports public models and text LoRA fine-tuning; private/gated Hub authentication, image/audio fine-tuning, and checkpoint resume are not implemented here.
+
+The real Qwen3-0.6B download → one LoRA step → saved-adapter inference flow passed on Apple MPS. This is an execution smoke test, not a quality benchmark. See the [workflow validation and research record](docs/workflow-validation.md).
 
 ## Training, SSH, and W&B
 
@@ -135,6 +148,10 @@ State lives under `.aiide/`: versioned YAML manifest, SQLite/WAL database, conne
 npm run typecheck
 npm test
 npm run check:format
+npm run test:usability            # component/keyboard tests in Chrome
+npm run test:workflows:agents      # real MCP template → setup → SVM workflow
+npm run test:workflows:ui          # after build:browser; real no-code browser flow
+npm run test:huggingface           # opt-in: ~1.2 GB Qwen download + one LoRA step
 ```
 
 `npm test` includes actual Python → Collector → SQLite ingestion/restart, Collector crash recovery, parent/child SDK contexts, pagination of 10,000 spans, MCP authorization/revocation, secret redaction, capability probes, and staged-edit conflict checks. Loopback networking must be available.

@@ -8,7 +8,7 @@ import csv
 import hashlib
 import importlib
 import importlib.util
-import itertools
+import io
 import json
 import math
 import os
@@ -109,7 +109,7 @@ def _number(value):
     return number if math.isfinite(number) else None
 
 
-def _read(file):
+def _read(file, min_columns=2):
     path = Path(file)
     if path.suffix.lower() not in (".csv", ".tsv", ".txt"):
         raise ValueError("Choose a .csv or .tsv file")
@@ -122,8 +122,8 @@ def _read(file):
             dialect = csv.excel_tab if path.suffix.lower() == ".tsv" else csv.excel
         reader = csv.reader(stream, dialect)
         header = [h.strip() or f"column_{i + 1}" for i, h in enumerate(next(reader, []))]
-        if len(header) < 2:
-            raise ValueError("The file needs a header row and at least two columns")
+        if len(header) < min_columns:
+            raise ValueError(f"The file needs a header row and at least {min_columns} columns")
         if len(set(header)) != len(header):
             raise ValueError("Column names must be unique")
         rows = []
@@ -132,6 +132,8 @@ def _read(file):
                 continue
             if len(rows) >= MAX_ROWS:
                 raise ValueError(f"More than {MAX_ROWS:,} rows; sample the file first")
+            if len(row) > len(header):
+                raise ValueError(f"Row {reader.line_num} has more values than the header; check the delimiter and quoting")
             rows.append((row + [""] * len(header))[: len(header)])
     if not rows:
         raise ValueError("The file has no data rows")
@@ -175,6 +177,17 @@ def inspect(request):
     columns = _profile(header, rows)
     return {"file": request["file"], "rows": len(rows), "columns": columns, "sample": rows[:8],
             "tasks": {c["name"]: _suggest_task(c) for c in columns}, "target": header[-1]}
+
+
+def sample(_request=None):
+    from sklearn.datasets import load_iris
+    data = load_iris()
+    stream = io.StringIO()
+    writer = csv.writer(stream)
+    writer.writerow([*data.feature_names, "species"])
+    for row, target in zip(data.data, data.target):
+        writer.writerow([*row, data.target_names[target]])
+    return {"csv": stream.getvalue()}
 
 
 def _matrix(header, rows, features, target, task, columns):
@@ -228,7 +241,9 @@ def _pipeline(model_id, params, task, numeric, categorical, seed):
     options = dict(params)
     if "random_state" in estimator().get_params():
         options.setdefault("random_state", seed)
-    return Pipeline([("prepare", ColumnTransformer(parts)), ("model", estimator(**options))])
+    # Histogram boosting requires dense input; other estimators can retain sparse encoding.
+    threshold = 0 if model_id == "hist_gradient_boosting" else 0.3
+    return Pipeline([("prepare", ColumnTransformer(parts, sparse_threshold=threshold)), ("model", estimator(**options))])
 
 
 # ---------- sweeps ----------
@@ -241,11 +256,17 @@ def _parse(kind, text, name):
     for item in items:
         try:
             if kind == "int" or (kind == "int_or_none" and item.lower() != "none"):
-                values.append(int(float(item)))
+                number = float(item)
+                if not math.isfinite(number) or not number.is_integer():
+                    raise ValueError
+                values.append(int(number))
             elif kind == "int_or_none":
                 values.append(None)
             elif kind == "float":
-                values.append(float(item))
+                number = float(item)
+                if not math.isfinite(number):
+                    raise ValueError
+                values.append(number)
             elif kind == "bool":
                 if item.lower() not in ("true", "false"):
                     raise ValueError
@@ -260,23 +281,42 @@ def _parse(kind, text, name):
 
 
 def trials(config):
-    task, result = config["task"], []
+    task, grids = config["task"], []
+    total = 0
     for entry in config["models"]:
         model_id = entry["id"]
         if model_id not in _models(task):
             raise ValueError(f"Unknown model: {model_id}")
         spec = _models(task)[model_id][2]
+        unknown = set(entry.get("grid", {})) - set(spec)
+        if unknown:
+            raise ValueError(f"Unknown hyperparameter: {sorted(unknown)[0]}")
         grid = {name: _parse(kind, entry.get("grid", {}).get(name, ", ".join(_show(v) for v in default)), name)
                 for name, (kind, default, _help) in spec.items()}
-        for combo in itertools.product(*grid.values()):
-            result.append((model_id, dict(zip(grid, combo))))
-    if not result:
+        count = math.prod(len(v) for v in grid.values())
+        total += count
+        grids.append((model_id, grid, count))
+    if not total:
         raise ValueError("Select at least one model")
+    count = total
     if config.get("search") == "random":
-        count = max(1, min(int(config.get("trials", 20)), len(result)))
-        result = random.Random(int(config.get("seed", 42))).sample(result, count)
-    if len(result) > MAX_TRIALS:
-        raise ValueError(f"{len(result)} trials; reduce the grid or use random search (max {MAX_TRIALS})")
+        count = min(int(config.get("trials", 20)), total)
+    if not 1 <= count <= MAX_TRIALS:
+        raise ValueError(f"{count} trials; reduce the grid or use random search (max {MAX_TRIALS})")
+    # Decode sampled indices without allocating every hyperparameter combination.
+    indices = random.Random(int(config.get("seed", 42))).sample(range(total), count) if config.get("search") == "random" else range(total)
+    result = []
+    for index in indices:
+        for model_id, grid, size in grids:
+            if index >= size:
+                index -= size
+                continue
+            params = {}
+            for name, values in reversed(list(grid.items())):
+                params[name] = values[index % len(values)]
+                index //= len(values)
+            result.append((model_id, params))
+            break
     return result
 
 
@@ -300,7 +340,10 @@ def _scorers(task, metrics, classes):
              "mape": "neg_mean_absolute_percentage_error", "accuracy": "accuracy", "f1": "f1_macro",
              "precision": "precision_macro", "recall": "recall_macro",
              "roc_auc": "roc_auc" if classes == 2 else "roc_auc_ovr", "log_loss": "neg_log_loss"}
-    chosen = [m for m in metrics if m in _METRICS[task]]
+    unknown = [m for m in metrics if m not in _METRICS[task]]
+    if unknown:
+        raise ValueError(f"Unknown {task} metric: {unknown[0]}")
+    chosen = list(dict.fromkeys(metrics))
     if not chosen:
         raise ValueError("Choose at least one metric")
     return {m: names[m] for m in chosen}
@@ -310,7 +353,7 @@ def _load(config):
     header, rows = _read(config["file"])
     columns = _profile(header, rows)
     target, task = config["target"], config["task"]
-    features = [f for f in config.get("features") or header if f != target]
+    features = [f for f in config.get("features", header) if f != target]
     unknown = [f for f in [target, *features] if f not in header]
     if unknown:
         raise ValueError(f"Unknown column: {unknown[0]}")
@@ -334,6 +377,15 @@ def sweep(config):
     higher = _METRICS[task][primary][1]
     plan = trials(config)
     splitter = _splitter(config, task)
+    if task == "classification":
+        from collections import Counter
+        counts = Counter(y)
+        minimum = min(counts.values())
+        needed = config.get("validation", {}).get("folds", 5) if config.get("validation", {}).get("type") != "holdout" else 2
+        if minimum < needed:
+            raise ValueError(f"The smallest target class has {minimum} rows; this validation needs at least {needed} per class. Reduce folds or add examples.")
+    # Validate the split once so dataset errors don't repeat for every candidate.
+    splits = list(splitter.split(x, y))
     print(f"{len(plan)} trials · {len(y):,} rows ({dropped} without target) · {len(features)} features · {task}", flush=True)
     metric("lab.trials_total", len(plan))
     best = None
@@ -345,8 +397,10 @@ def sweep(config):
             with span(f"trial {number} · {label}", model=model_id, **{f"param.{k}": _show(v) for k, v in params.items()}):
                 try:
                     pipe = _pipeline(model_id, params, task, numeric, categorical, int(config.get("seed", 42)))
-                    result = cross_validate(pipe, x, y, cv=splitter, scoring=scoring, return_train_score=True,
+                    result = cross_validate(pipe, x, y, cv=splits, scoring=scoring, return_train_score=True,
                                             n_jobs=int(config.get("jobs", 1)), error_score="raise")
+                    if any(not np.isfinite(result[f"test_{m}"]).all() for m in scoring):
+                        raise ValueError("A validation metric is undefined; use more rows per fold or another metric.")
                 except Exception as error:  # A broken combination must not end the sweep.
                     record.update(status="failed", error=f"{type(error).__name__}: {error}"[:600])
                     _event("trial", f"trial-{number}", record, number)
@@ -369,6 +423,8 @@ def sweep(config):
             metric(f"best.{primary}", best, number)
             print(f"[{number}/{len(plan)}] {label} {record['params']} → {primary} {score:.4g}", flush=True)
     flush()
+    if best is None:
+        raise ValueError("Every trial failed. Inspect the trial errors and adjust the data or hyperparameters before retrying.")
 
 
 # ---------- final model + inference ----------
@@ -447,7 +503,10 @@ def predict(request):
     meta, pipe = _model(request["model"])
     started = time.monotonic()
     if request.get("file"):
-        header, rows = _read(request["file"])
+        header, rows = _read(request["file"], min_columns=1)
+        missing = [f["name"] for f in meta["features"] if f["name"] not in header]
+        if missing:
+            raise ValueError(f"Prediction CSV is missing feature columns: {', '.join(missing)}")
         records = [dict(zip(header, row)) for row in rows]
     else:
         records = request.get("rows") or []

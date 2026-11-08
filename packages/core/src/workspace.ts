@@ -21,6 +21,7 @@ import { Integrations } from './integrations';
 import { Training } from './training';
 import { Wandb } from './wandb';
 import { Lab } from './lab';
+import { HuggingFace } from './huggingface';
 import { hash, within } from './security';
 import { RpcRequest, Run } from './types';
 
@@ -50,6 +51,7 @@ export class Workspace {
   readonly training: Training;
   readonly wandb: Wandb;
   readonly lab: Lab;
+  readonly huggingface: HuggingFace;
   private qdrantName: string;
   private managedQdrant = false;
   private release?: () => void;
@@ -83,7 +85,9 @@ export class Workspace {
       this.store,
     );
     this.assistant = new Assistant(this.connections, this.sandbox, this.store);
-    this.mcp = new McpEndpoint(this.sandbox, this.store);
+    this.mcp = new McpEndpoint(this.sandbox, this.store, (operation, args) =>
+      this.operation(operation, args),
+    );
     this.rag = new Rag(this.root, this.connections, this.store);
     this.integrations = new Integrations(this.root, assets);
     this.training = new Training(
@@ -95,6 +99,7 @@ export class Workspace {
     );
     this.wandb = new Wandb(this.root, assets, this.connections);
     this.lab = new Lab(this.root, this.runs, assets);
+    this.huggingface = new HuggingFace(this.root, this.runs, assets);
     this.qdrantName = 'aiide-qdrant-' + hash(this.root).slice(0, 12);
   }
   static async open(root: string) {
@@ -153,6 +158,143 @@ export class Workspace {
     args: Record<string, any> = {},
   ): Promise<any> {
     switch (operation) {
+      case 'workflows.catalog':
+        return {
+          setup: {
+            'project.create': {
+              template:
+                'sklearn | finetune | pytorch | python | rag | langgraph',
+              name: 'new-folder-name',
+            },
+            nextStep:
+              'Open the returned project folder in the IDE and connect to its MCP endpoint. Credentials are workspace-specific.',
+            'environment.setup': {},
+            environment:
+              'Installs the existing uv.lock using uv sync --locked; preserves other package managers and lockfiles.',
+          },
+          classification: {
+            steps: [
+              'environment.setup',
+              'lab.sample or lab.files',
+              'lab.inspect',
+              'lab.catalog',
+              'lab.sweep',
+              'inspect_run / inspect_events',
+              'lab.final',
+              'lab.predict',
+            ],
+            'lab.sample': {},
+            'lab.sweep': {
+              config: {
+                file: 'file returned by lab.sample',
+                target: 'species',
+                task: 'classification',
+                metrics: ['accuracy', 'f1'],
+                primary: 'f1',
+                validation: { type: 'kfold', folds: 3 },
+                models: [{ id: 'svm', grid: { C: '0.1,1,10' } }],
+                search: 'grid',
+                trials: 20,
+              },
+            },
+            modelIds:
+              'Use IDs and parameter names returned by lab.catalog; the built-in Iris sample has target species.',
+            'lab.final': {
+              config: {
+                file: 'file returned by lab.sample',
+                target: 'species',
+                task: 'classification',
+                model: 'ID from winning trial',
+                params: {},
+                name: 'chosen-model',
+              },
+            },
+            'lab.predict': {
+              model: 'path from lab.models',
+              rows: [{ feature: 'value' }],
+            },
+          },
+          finetuning: {
+            steps: [
+              'environment.setup',
+              'hf.status',
+              'hf.download',
+              'inspect_run until completed',
+              'hf.models',
+              'hf.files',
+              'hf.train',
+              'inspect_run until completed',
+              'hf.generate',
+              'hf.result',
+            ],
+            'hf.download': { repo: 'Qwen/Qwen3-0.6B', revision: 'main' },
+            'hf.train': {
+              model: 'path from hf.models',
+              dataset: 'data/train.jsonl',
+              steps: 2,
+              learningRate: 0.0002,
+              batchSize: 1,
+              maxLength: 128,
+              rank: 8,
+              device: 'auto',
+            },
+            'hf.generate': {
+              model: 'path from hf.models',
+              prompt: 'Explain classification briefly.',
+              maxNewTokens: 32,
+              device: 'auto',
+            },
+            'hf.result': { file: 'output path returned by hf.generate' },
+          },
+          diagnostics:
+            'Inspect run status, events, traces, and metrics. Distinguish observed errors from hypotheses. Compare configurations and held-out metrics before recommending changes. Content-disabled logs cannot be recovered.',
+        };
+      case 'environment.setup': {
+        for (const file of ['pyproject.toml', 'uv.lock'])
+          if (!fs.existsSync(within(this.root, file, true)))
+            throw new Error(
+              'Create a locked template project from Home first; setup requires pyproject.toml and uv.lock',
+            );
+        if (
+          detectEnvironment(this.root).locks.some((file) =>
+            ['poetry.lock', 'Pipfile.lock'].includes(file),
+          )
+        )
+          throw new Error(
+            'Use this project’s existing package manager; automatic setup supports uv.lock projects only',
+          );
+        if (
+          this.store
+            .runs()
+            .some(
+              (run) =>
+                run.name === 'Environment setup' && run.status === 'running',
+            )
+        )
+          throw new Error(
+            'Environment setup is already running; inspect its run before starting another',
+          );
+        return this.runs.start(
+          'Environment setup',
+          undefined,
+          {},
+          { command: ['uv', 'sync', '--locked'], lab: undefined },
+        );
+      }
+      case 'hf.status':
+        return this.huggingface.status();
+      case 'hf.files':
+        return this.huggingface.files();
+      case 'hf.models':
+        return this.huggingface.models();
+      case 'hf.download':
+        return this.huggingface.download(args);
+      case 'hf.train':
+        return this.huggingface.train(args);
+      case 'hf.generate':
+        return this.huggingface.generate(args);
+      case 'hf.result':
+        return this.huggingface.result(args.file);
       case 'ssh.list':
         return this.training.ssh.list();
       case 'ssh.save':
@@ -179,6 +321,8 @@ export class Workspace {
         return this.lab.catalog();
       case 'lab.files':
         return this.lab.files();
+      case 'lab.sample':
+        return this.lab.sample();
       case 'lab.inspect':
         return this.lab.inspect(args.file);
       case 'lab.sweep':

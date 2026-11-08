@@ -15,3 +15,4 @@ export * from './wandb';
 
 export * from './agent-access';
 export * from './lab';
+export * from './huggingface';
