@@ -1,17 +1,7 @@
 import React from '@theia/core/shared/react';
-import type { Run, Span, Connection, EventRecord } from '../common/protocol.js';
-import {
-  Call,
-  Perform,
-  format,
-  time,
-  Card,
-  Empty,
-  Json,
-  Heading,
-  RunSelect,
-  ConnectionSelect,
-} from './shared.js';
+import type { Run, Span } from '../common/protocol.js';
+import { Call, Perform, Empty, Heading, RunSelect } from './shared.js';
+import { TraceView, spansToNodes } from './trace-view.js';
 export function TracePanel({
   run,
   runs,
@@ -33,11 +23,9 @@ export function TracePanel({
     [data, setData] = React.useState<{ total: number; items: Span[] }>({
       total: 0,
       items: [],
-    }),
-    [span, setSpan] = React.useState<Span>();
+    });
   React.useEffect(() => {
     setPage(0);
-    setSpan(undefined);
     setData({ total: 0, items: [] });
   }, [run?.id]);
   React.useEffect(() => {
@@ -60,26 +48,12 @@ export function TracePanel({
       clearInterval(timer);
     };
   }, [run?.id, run?.status, page, call]);
-  const start = Math.min(...data.items.map((s) => s.start)),
-    end = Math.max(...data.items.map((s) => s.end));
-  const depth = (span: Span) => {
-    let n = 0,
-      current = span;
-    const seen = new Set<string>();
-    while (current.parentSpanId && n < 8 && !seen.has(current.spanId)) {
-      seen.add(current.spanId);
-      const parent = data.items.find((s) => s.spanId === current.parentSpanId);
-      if (!parent) break;
-      current = parent;
-      n++;
-    }
-    return n;
-  };
+  const nodes = React.useMemo(() => spansToNodes(data.items), [data.items]);
   return (
     <>
       <Heading
         title="See every step"
-        text="Model calls, tools, and retrieval in one execution timeline."
+        text="Model calls, tool calls, retrieval, and evaluator scores as a run tree."
       />
       <RunSelect runs={runs} selected={run?.id || ''} select={select} />
       {!run ? (
@@ -106,50 +80,13 @@ export function TracePanel({
               Next →
             </button>
           </div>
-          <div className="aiide-columns wide-left">
-            <div className="aiide-trace-list">
-              {data.items.map((s) => (
-                <button
-                  key={s.traceId + s.spanId}
-                  className={`aiide-span ${span?.spanId === s.spanId ? 'selected' : ''}`}
-                  aria-pressed={span?.spanId === s.spanId}
-                  aria-label={`${s.name}, ${s.status}, ${Math.max(0, s.end - s.start)} milliseconds`}
-                  onClick={() => setSpan(s)}
-                >
-                  <span style={{ paddingLeft: depth(s) * 14 }}>
-                    <i
-                      className={`codicon ${s.status === 'error' ? 'codicon-error' : 'codicon-symbol-method'}`}
-                    />{' '}
-                    {s.name}
-                  </span>
-                  <span className="aiide-waterfall" aria-hidden="true">
-                    <span
-                      style={{
-                        marginLeft: `${((s.start - start) / Math.max(1, end - start)) * 85}%`,
-                        width: `${Math.max(1, ((s.end - s.start) / Math.max(1, end - start)) * 85)}%`,
-                      }}
-                    />
-                  </span>
-                  <small>{Math.max(0, s.end - s.start)} ms</small>
-                </button>
-              ))}
-            </div>
-            <section className="aiide-card">
-              {span ? (
-                <>
-                  <h3>{span.name}</h3>
-                  <span
-                    className={`aiide-badge ${span.status === 'error' ? 'failed' : 'completed'}`}
-                  >
-                    {span.status}
-                  </span>
-                  <p>Duration: {span.end - span.start} ms</p>
-                  {span.parentSpanId &&
-                    !data.items.some((s) => s.spanId === span.parentSpanId) && (
-                      <p className="aiide-note">
-                        Parent is outside this page or has not been received.
-                      </p>
-                    )}
+          <TraceView
+            nodes={nodes}
+            actions={(node) => {
+              const span = data.items.find((s) => s.spanId === node.id);
+              if (!span) return null;
+              return (
+                <div className="aiide-actions">
                   {Boolean(span.attributes['code.filepath']) && (
                     <button
                       onClick={() =>
@@ -169,16 +106,10 @@ export function TracePanel({
                   <button onClick={() => attach(span)}>
                     Attach to assistant
                   </button>
-                  <h4>Attributes</h4>
-                  <Json value={span.attributes} />
-                  <h4>Events</h4>
-                  <Json value={span.events} />
-                </>
-              ) : (
-                <p>Select a step to inspect its attributes.</p>
-              )}
-            </section>
-          </div>
+                </div>
+              );
+            }}
+          />
           {data.items.some((s) => s.attributes['langgraph.node']) && (
             <section className="aiide-card">
               <h3>Observed graph execution</h3>

@@ -22,6 +22,8 @@ import { Training } from './training';
 import { Wandb } from './wandb';
 import { Lab } from './lab';
 import { HuggingFace } from './huggingface';
+import { Servers } from './serving';
+import { Evals } from './evals';
 import { hash, within } from './security';
 import { RpcRequest, Run } from './types';
 
@@ -52,6 +54,8 @@ export class Workspace {
   readonly wandb: Wandb;
   readonly lab: Lab;
   readonly huggingface: HuggingFace;
+  readonly servers: Servers;
+  readonly evals: Evals;
   private qdrantName: string;
   private managedQdrant = false;
   private release?: () => void;
@@ -100,6 +104,13 @@ export class Workspace {
     this.wandb = new Wandb(this.root, assets, this.connections);
     this.lab = new Lab(this.root, this.runs, assets);
     this.huggingface = new HuggingFace(this.root, this.runs, assets);
+    this.servers = new Servers(this.runs, this.connections, this.huggingface);
+    this.evals = new Evals(
+      this.root,
+      this.store,
+      this.connections,
+      this.huggingface,
+    );
     this.qdrantName = 'aiide-qdrant-' + hash(this.root).slice(0, 12);
   }
   static async open(root: string) {
@@ -246,6 +257,43 @@ export class Workspace {
             },
             'hf.result': { file: 'output path returned by hf.generate' },
           },
+          evaluation: {
+            steps: [
+              'hf.models',
+              'serving.start (or use any model connection)',
+              'serving.list until state is ready; note its connection',
+              'evals.files',
+              'evals.run',
+              'inspect_run until completed',
+              'evals.get',
+              'evals.score for agent_review cases',
+            ],
+            'serving.start': {
+              model: 'path from hf.models (base or LoRA adapter)',
+              engine: 'transformers | vllm | sglang | mlx',
+              device: 'auto',
+            },
+            'evals.run': {
+              dataset: 'data/eval.jsonl',
+              target: 'connection from serving.list',
+              scorers: [
+                { type: 'contains' },
+                { type: 'tool_call' },
+                { type: 'agent', rubric: 'What a good answer looks like' },
+              ],
+              temperature: 0,
+              maxTokens: 512,
+            },
+            datasetRow:
+              '{"input":"...","expected":"...","tools":[OpenAI function specs],"expected_tool":{"name":"...","arguments":{}}}; or "messages" instead of "input"',
+            scorerTypes:
+              'exact, contains, regex {pattern}, json, tool_call, judge {connection, rubric}, python {file defining score(output, expected, case, tool_calls)}, agent {rubric}',
+            'evals.get': { runId: 'run ID', offset: 0, limit: 50 },
+            'evals.score': {
+              runId: 'run ID',
+              scores: [{ index: 0, score: 1, reason: 'why' }],
+            },
+          },
           diagnostics:
             'Inspect run status, events, traces, and metrics. Distinguish observed errors from hypotheses. Compare configurations and held-out metrics before recommending changes. Content-disabled logs cannot be recovered.',
         };
@@ -295,6 +343,22 @@ export class Workspace {
         return this.huggingface.generate(args);
       case 'hf.result':
         return this.huggingface.result(args.file);
+      case 'serving.list':
+        return this.servers.list();
+      case 'serving.start':
+        return this.servers.start(args);
+      case 'evals.files':
+        return this.evals.files();
+      case 'evals.sample':
+        return this.evals.sample();
+      case 'evals.list':
+        return this.evals.list();
+      case 'evals.run':
+        return this.evals.run(args);
+      case 'evals.get':
+        return this.evals.get(args.runId, args.offset, args.limit);
+      case 'evals.score':
+        return this.evals.score(args.runId, args);
       case 'ssh.list':
         return this.training.ssh.list();
       case 'ssh.save':
@@ -385,6 +449,8 @@ export class Workspace {
       case 'runs.start':
         return this.runs.start(args.name);
       case 'runs.cancel':
+        if (this.store.run(args.id)?.configuration?.evaluation)
+          return this.evals.cancel(args.id);
         return this.store.run(args.id)?.training
           ? this.training.cancel(args.id)
           : this.runs.cancel(args.id);

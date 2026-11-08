@@ -80,6 +80,19 @@ Example evaluation case:
 
 `match` can be `contains` or `exact`; optional judge-model scoring is separate. Local Qdrant uses a dynamically assigned loopback port and persistent storage under `.aiide/qdrant`. Stopping the server does not delete its data. The RAG panel shows document content deliberately; the telemetry content setting controls persisted telemetry, not the database's required document payload.
 
+## Serve and evaluate fine-tuned models
+
+Open **Train → Serve & evaluate** (or **Serve & evaluate this model →** on the fine-tuning page).
+
+1. **Serve:** pick a downloaded base model or LoRA adapter and an engine: **Built-in (Transformers)** works wherever the project trains and loads adapters directly; **vLLM**, **SGLang** and **MLX** are used when installed in the project environment or on PATH (adapters are merged into full weights once, cached under the adapter's `merged/` folder). The server listens on 127.0.0.1 with an OpenAI-compatible API and is registered as a `serve-<engine>-…` model connection when ready. Stopping it removes that connection. Ollama and llama.cpp need GGUF conversion and are not wired in yet.
+2. **Dataset:** JSONL, one case per line: `{"input":"…","expected":"…"}`, or `"messages"` for multi-turn. For tool use add OpenAI `"tools"` and `"expected_tool":{"name":"…","arguments":{…}}`. **Create a sample dataset & reward** writes a starter set.
+3. **Scorers:** verifiable rewards (contains, exact match, regex, valid/equal JSON, tool call, and a Python `score(output, expected, case, tool_calls)` function), **LLM as judge** (any model connection with your rubric), and **Agent review**, where Claude Code or Codex grades over MCP (`run_workflow evals.get` then `evals.score`, workflow permission). Python reward files run on the host, so agents cannot start them.
+4. **Experiments:** every run lists per-scorer means, p50 latency and tokens for side-by-side comparison. Click a case for a LangSmith-style trace: chain → LLM → tool calls → evaluator verdicts (including the judge's own call), with chat messages, tool-call arguments and the model's reasoning shown separately from the scored answer. The **Traces** page uses the same run tree for all runs.
+
+Case content is saved under `.aiide/evals/` for this page; telemetry spans follow the content-capture setting. Reasoning models (Qwen3) answer without thinking unless **Let reasoning models think first** is ticked.
+
+Validated on Apple MPS with real Qwen3-0.6B + LoRA through the built-in engine and vLLM (vllm-metal), including a real `get_weather` tool call. SGLang and MLX command lines are implemented but were not run here.
+
 ## Coding assistant and external agents
 
 **Codex and Claude Code:** open **Build → External agents** for scoped credentials, client launch commands, project guidance, and reviewable external-agent sessions. Agents can inspect runs, traces, logs, evaluations, and training metrics through MCP. With the separate **Local setup, training, and inference** permission, they can also create template projects, install locked environments, run model sweeps, download public Hub models, fine-tune, and predict. Jobs appear in Runs and can be cancelled; staged source edits still require review. See the [coding-agent guide](docs/coding-agents.md).

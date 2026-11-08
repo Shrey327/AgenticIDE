@@ -24,7 +24,8 @@ def status():
             devices.append('mps')
         if torch.cuda.is_available():
             devices.append('cuda')
-    return {'ready': not missing, 'missing': missing, 'devices': devices, 'python': sys.executable}
+    from .server import engines
+    return {'ready': not missing, 'missing': missing, 'devices': devices, 'python': sys.executable, 'engines': engines()}
 
 
 def choose_device(requested):
@@ -169,6 +170,9 @@ def main():
         return
     config = json.loads(os.environ['AIIDE_HF_CONFIG'])
     try:
+        if mode == 'serve':
+            from .server import serve
+            return serve(config, local, metadata, load_model)
         result = {'download': download, 'train': train, 'generate': generate}[mode](config)
         print(json.dumps(result), flush=True)
     finally:

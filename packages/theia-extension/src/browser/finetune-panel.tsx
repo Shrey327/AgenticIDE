@@ -9,12 +9,14 @@ export function FinetunePanel({
   select,
   refresh,
   openRun,
+  openEvals,
 }: {
   call: Call;
   perform: Perform;
   runs: Run[];
   select: (id: string) => void;
   openRun?: (id: string) => void;
+  openEvals?: (model: string) => void;
   refresh: () => Promise<void>;
 }) {
   const [status, setStatus] = React.useState<any>(),
@@ -439,6 +441,15 @@ export function FinetunePanel({
         >
           Generate locally
         </button>
+        {openEvals && (
+          <button
+            className="aiide-primary"
+            disabled={!model}
+            onClick={() => openEvals(model)}
+          >
+            Serve & evaluate this model →
+          </button>
+        )}
         <p className="aiide-note">
           The response is saved locally under .aiide/hf-results so it can be
           displayed after the run. It is not exported to telemetry.

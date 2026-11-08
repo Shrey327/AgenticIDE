@@ -24,6 +24,18 @@
         "--port=3090"
       ],
       "port": 3090
+    },
+    {
+      "name": "aiide-browser-qwen",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "start:browser",
+        "--",
+        "/Users/shreyansh/Documents/AgenticIDE/artifacts/qwen-smoke/workspace",
+        "--port=3100"
+      ],
+      "port": 3100
     }
   ]
 }

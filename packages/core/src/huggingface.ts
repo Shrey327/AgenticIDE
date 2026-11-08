@@ -7,8 +7,8 @@ import { loadProject } from './project';
 import { subprocess } from './ssh';
 import { within } from './security';
 
-const modelPath = z.string().regex(/^models\/hf-[A-Za-z0-9_-]+$/);
-const device = z.enum(['auto', 'cpu', 'mps', 'cuda']).default('auto');
+export const modelPath = z.string().regex(/^models\/hf-[A-Za-z0-9_-]+$/);
+export const device = z.enum(['auto', 'cpu', 'mps', 'cuda']).default('auto');
 const downloadSchema = z.object({
   repo: z
     .string()
@@ -39,17 +39,21 @@ export class HuggingFace {
     readonly runs: Runs,
     readonly assets: string,
   ) {}
-  status() {
+  /** Runs a bundled Python module in the project environment, exchanging JSON over stdin/stdout. */
+  python(module: string, args: string[], input: unknown, timeout: number) {
     const configured = loadProject(this.root).environment.python;
     const python = configured.includes('/')
       ? path.resolve(this.root, configured)
       : configured;
-    return subprocess(python, ['-m', 'aiide_hf', 'status'], {}, 60000, {
+    return subprocess(python, ['-m', module, ...args], input, timeout, {
       PATH: process.env.PATH,
       HOME: process.env.HOME,
       PYTHONPATH: path.join(this.assets, 'python'),
       PYTHONNOUSERSITE: '1',
     } as NodeJS.ProcessEnv);
+  }
+  status() {
+    return this.python('aiide_hf', ['status'], {}, 60000);
   }
   files() {
     const found: string[] = [];
@@ -92,7 +96,7 @@ export class HuggingFace {
         }
       });
   }
-  private model(value: string) {
+  model(value: string) {
     const relative = modelPath.parse(value);
     if (!this.models().some((model) => model.path === relative))
       throw new Error('Select a completed Hub download or fine-tuned model');

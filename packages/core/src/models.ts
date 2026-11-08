@@ -66,6 +66,13 @@ export class Connections {
     this.write(connection);
     return connection;
   }
+  remove(id: string) {
+    const all = this.list().filter((c) => c.id !== id);
+    fs.writeFileSync(this.file + '.tmp', JSON.stringify(all, null, 2), {
+      mode: 0o600,
+    });
+    fs.renameSync(this.file + '.tmp', this.file);
+  }
   write(connection: Connection) {
     const all = this.list().filter((c) => c.id !== connection.id);
     all.push(connection);
