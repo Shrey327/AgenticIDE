@@ -302,9 +302,15 @@ export function FinetunePanel({
         </div>
         <p>
           Place a UTF-8 JSONL file in this workspace with one example per line:{' '}
-          <code>{'{"text":"Your training example"}'}</code>. Maximum 50 MB /
-          100,000 examples. Select a base model to train; adapters can be tested
-          below.
+          <code>{'{"text":"Your training example"}'}</code>, or a chat example{' '}
+          <code>
+            {
+              '{"messages":[{"role":"user","content":"…"},{"role":"assistant","content":"…"}]}'
+            }
+          </code>{' '}
+          (only the final assistant answer is learned, in the model's own chat
+          format). Maximum 50 MB / 100,000 examples. Select a base model to
+          train; adapters can be tested below.
         </p>
         {!files.length && (
           <Empty>

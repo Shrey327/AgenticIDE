@@ -325,6 +325,18 @@ export function TraceView({
                   tokens
                 </span>
               )}
+            {selected.kind === 'llm' &&
+              !!selected.tokens?.output &&
+              selected.end > selected.start && (
+                <span>
+                  <i className="codicon codicon-dashboard" />{' '}
+                  {(
+                    selected.tokens.output /
+                    ((selected.end - selected.start) / 1000)
+                  ).toFixed(1)}{' '}
+                  tok/s
+                </span>
+              )}
             {selected.model && (
               <span>
                 <i className="codicon codicon-server-process" />{' '}

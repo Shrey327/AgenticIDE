@@ -50,14 +50,45 @@ def read_data(file):
                 row = json.loads(line)
             except ValueError as error:
                 raise ValueError(f'Invalid JSON on dataset line {number}') from error
-            if not isinstance(row, dict) or not isinstance(row.get('text'), str) or not row['text'].strip():
-                raise ValueError(f'Dataset line {number} needs a nonempty "text" field')
-            rows.append({'text': row['text']})
+            messages = row.get('messages') if isinstance(row, dict) else None
+            if isinstance(messages, list):
+                if not messages or not all(isinstance(m, dict) and m.get('role') in ('system', 'user', 'assistant', 'tool')
+                                           and isinstance(m.get('content'), str) for m in messages):
+                    raise ValueError(f'Dataset line {number}: messages need role and string content')
+                if messages[-1]['role'] != 'assistant' or not messages[-1]['content'].strip():
+                    raise ValueError(f'Dataset line {number}: the last message must be the assistant answer to learn')
+                rows.append({'messages': [{'role': m['role'], 'content': m['content']} for m in messages]})
+            elif isinstance(row, dict) and isinstance(row.get('text'), str) and row['text'].strip():
+                rows.append({'text': row['text']})
+            else:
+                raise ValueError(f'Dataset line {number} needs a nonempty "text" field or a "messages" conversation')
             if len(rows) > 100000:
                 raise ValueError('Dataset exceeds 100,000 rows')
     if not rows:
         raise ValueError('Dataset is empty')
     return rows
+
+
+def encode(tokenizer, row, max_length):
+    """Tokenize a row. Chat rows learn only the final assistant answer, formatted exactly as at inference."""
+    if 'text' in row:
+        ids = tokenizer(row['text'], truncation=True, max_length=max_length)['input_ids']
+        return {'input_ids': ids, 'attention_mask': [1] * len(ids), 'labels': list(ids)}
+    messages = row['messages']
+    if tokenizer.chat_template:
+        prompt = tokenizer.apply_chat_template(messages[:-1], tokenize=False, add_generation_prompt=True, enable_thinking=False)
+        full = tokenizer.apply_chat_template(messages, tokenize=False, enable_thinking=False)
+        answer = full[len(prompt):] if full.startswith(prompt) else messages[-1]['content'] + (tokenizer.eos_token or '')
+    else:
+        prompt = '\n'.join(m['content'] for m in messages[:-1]) + '\n'
+        answer = messages[-1]['content'] + (tokenizer.eos_token or '')
+    prompt_ids = tokenizer(prompt, add_special_tokens=False)['input_ids']
+    answer_ids = tokenizer(answer, add_special_tokens=False)['input_ids']
+    ids = (prompt_ids + answer_ids)[:max_length]
+    labels = ([-100] * len(prompt_ids) + answer_ids)[:max_length]
+    if all(label == -100 for label in labels):
+        raise ValueError('A chat example is longer than the maximum tokens per example; raise the limit')
+    return {'input_ids': ids, 'attention_mask': [1] * len(ids), 'labels': labels}
 
 
 def metadata(directory):
@@ -108,7 +139,7 @@ def load_model(config, train=False):
 
 def train(config):
     from datasets import Dataset
-    from transformers import Trainer, TrainingArguments, DataCollatorForLanguageModeling, set_seed
+    from transformers import Trainer, TrainingArguments, DataCollatorForSeq2Seq, set_seed
     from peft import LoraConfig, get_peft_model
     from aiide_sdk import artifact
     from aiide_sdk.training import trainer_callback
@@ -118,7 +149,7 @@ def train(config):
     if meta['kind'] != 'base':
         raise ValueError('Choose a base model to start a new LoRA fine-tune')
     model = get_peft_model(model, LoraConfig(task_type='CAUSAL_LM', target_modules='all-linear', r=config['rank'], lora_alpha=2 * config['rank']))
-    dataset = Dataset.from_list(rows).map(lambda row: tokenizer(row['text'], truncation=True, max_length=config['maxLength']), remove_columns=['text'])
+    dataset = Dataset.from_list([encode(tokenizer, row, config['maxLength']) for row in rows])
     if any(len(row['input_ids']) < 2 for row in dataset):
         raise ValueError('Each training example must tokenize to at least two tokens')
     output = local(config['output'])
@@ -127,7 +158,7 @@ def train(config):
         args=TrainingArguments(output_dir=str(output / 'checkpoints'), max_steps=config['steps'], learning_rate=config['learningRate'],
             per_device_train_batch_size=config['batchSize'], logging_steps=1, save_strategy='no', report_to='none', use_cpu=device == 'cpu',
             dataloader_pin_memory=False, seed=42),
-        data_collator=DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False), callbacks=[trainer_callback()])
+        data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer, padding=True, label_pad_token_id=-100), callbacks=[trainer_callback()])
     trained = trainer.train()
     if not math.isfinite(trained.training_loss):
         raise ValueError("Training loss is not finite; check data and reduce the learning rate")

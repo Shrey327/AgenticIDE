@@ -23,7 +23,9 @@ class HubValidationTests(unittest.TestCase):
             file = Path(directory) / 'data.jsonl'
             file.write_text('{"text":"two tokens"}\n\n')
             self.assertEqual(read_data('data.jsonl'), [{'text': 'two tokens'}])
-            for content in ['', '{}', 'not json', '{"text":" "}']:
+            file.write_text('{"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"hello"}]}\n')
+            self.assertEqual(read_data('data.jsonl')[0]['messages'][1]['content'], 'hello')
+            for content in ['', '{}', 'not json', '{"text":" "}', '{"messages":[{"role":"user","content":"hi"}]}']:
                 file.write_text(content)
                 with self.assertRaises(ValueError):
                     read_data('data.jsonl')

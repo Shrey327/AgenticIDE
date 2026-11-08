@@ -1,0 +1,610 @@
+[
+  {
+    "id": "01-intro",
+    "section": "FINE-TUNING, END TO END",
+    "title": "Teach a small\nmodel a real job.",
+    "benefit": "From an empty folder to a served, evaluated fine-tune on a laptop.",
+    "tag": "QWEN3-0.6B \u00b7 APPLE SILICON \u00b7 ALL LOCAL",
+    "card": "task",
+    "lines": [
+      "Here is a common job for a small model: triage support tickets for a company called Lumen, and answer in strict JSON that other tools can rely on.",
+      "Each ticket needs a category, a priority, the product, and whether a human must step in. The priority and escalation rules are Lumen's own policy, so no model knows them out of the box.",
+      "We'll start from an empty folder, measure how a small open model does, build a golden dataset, fine-tune, and prove it got better. All of it in AI Engineering IDE."
+    ],
+    "recorded": 0,
+    "duration": 33.16,
+    "captions": [
+      {
+        "text": "Here is a common job for a small model: triage support tickets for a company called Lumen, and answer in strict JSON that other tools can rely on.",
+        "start": 0.7,
+        "end": 9.5,
+        "file": "01-intro-0.wav"
+      },
+      {
+        "text": "Each ticket needs a category, a priority, the product, and whether a human must step in. The priority and escalation rules are Lumen's own policy, so no model knows them out of the box.",
+        "start": 9.85,
+        "end": 21.77,
+        "file": "01-intro-1.wav"
+      },
+      {
+        "text": "We'll start from an empty folder, measure how a small open model does, build a golden dataset, fine-tune, and prove it got better. All of it in AI Engineering IDE.",
+        "start": 22.119999999999997,
+        "end": 32.36,
+        "file": "01-intro-2.wav"
+      }
+    ],
+    "start": 0.0,
+    "speed": 1.0
+  },
+  {
+    "id": "02-project",
+    "section": "01 / START FROM SCRATCH",
+    "title": "An empty folder,\na real project.",
+    "benefit": "Templates come with tracing and a locked Python environment.",
+    "tag": "REAL IDE \u00b7 EMPTY FOLDER",
+    "lines": [
+      "We open an empty folder and create a project from the PEFT fine-tuning template, called ticket triage.",
+      "The IDE switches into the new project. It already has instrumentation, an evaluation example, and a locked environment definition."
+    ],
+    "recorded": 12,
+    "duration": 16.17,
+    "captions": [
+      {
+        "text": "We open an empty folder and create a project from the PEFT fine-tuning template, called ticket triage.",
+        "start": 0.7,
+        "end": 6.7,
+        "file": "02-project-0.wav"
+      },
+      {
+        "text": "The IDE switches into the new project. It already has instrumentation, an evaluation example, and a locked environment definition.",
+        "start": 7.05,
+        "end": 15.370000000000001,
+        "file": "02-project-1.wav"
+      }
+    ],
+    "start": 33.16,
+    "speed": 1.0
+  },
+  {
+    "id": "03-setup",
+    "section": "02 / GET A BASE MODEL",
+    "title": "Pick an open\nmodel.",
+    "benefit": "Public Hub models, pinned to an exact commit.",
+    "tag": "HUGGING FACE \u00b7 LOCKED ENVIRONMENT",
+    "lines": [
+      "On the Hugging Face page, we install the locked environment: PyTorch, Transformers, and PEFT, isolated to this project.",
+      "Then we download Qwen3 0.6B, a six hundred million parameter open model, about one point two gigabytes. The IDE records the exact commit it downloaded."
+    ],
+    "recorded": 27.324,
+    "duration": 21.515,
+    "captions": [
+      {
+        "text": "On the Hugging Face page, we install the locked environment: PyTorch, Transformers, and PEFT, isolated to this project.",
+        "start": 0.7,
+        "end": 8.379999999999999,
+        "file": "03-setup-0.wav"
+      },
+      {
+        "text": "Then we download Qwen3 0.6B, a six hundred million parameter open model, about one point two gigabytes. The IDE records the exact commit it downloaded.",
+        "start": 8.729999999999999,
+        "end": 19.769999999999996,
+        "file": "03-setup-1.wav"
+      }
+    ],
+    "start": 49.33,
+    "speed": 1.27
+  },
+  {
+    "id": "04-data",
+    "section": "03 / BUILD A GOLDEN DATASET",
+    "title": "Write down\nwhat good means.",
+    "benefit": "Labels come from the policy, so every answer is known to be correct.",
+    "tag": "SYNTHETIC \u00b7 DETERMINISTIC \u00b7 HELD-OUT EVAL",
+    "lines": [
+      "Next, the data. We added a small generator script to the project. Its docstring is the triage policy.",
+      "P1 for outages, data loss, or a whole team blocked. P2 when one person is blocked or a payment fails. And a human must step in for refunds, cancellations, legal, or security.",
+      "Every example is labeled by that policy, so every answer is known to be correct. That is our golden dataset.",
+      "The eval set is held out: forty tickets with different wording and product names than the training data, so it measures generalization, not memorization.",
+      "We run the generator as a project command: four hundred training tickets and forty eval tickets."
+    ],
+    "recorded": 45.045,
+    "duration": 45.045,
+    "captions": [
+      {
+        "text": "Next, the data. We added a small generator script to the project. Its docstring is the triage policy.",
+        "start": 0.7,
+        "end": 7.66,
+        "file": "04-data-0.wav"
+      },
+      {
+        "text": "P1 for outages, data loss, or a whole team blocked. P2 when one person is blocked or a payment fails. And a human must step in for refunds, cancellations, legal, or security.",
+        "start": 8.01,
+        "end": 21.13,
+        "file": "04-data-1.wav"
+      },
+      {
+        "text": "Every example is labeled by that policy, so every answer is known to be correct. That is our golden dataset.",
+        "start": 21.479999999999997,
+        "end": 28.439999999999998,
+        "file": "04-data-2.wav"
+      },
+      {
+        "text": "The eval set is held out: forty tickets with different wording and product names than the training data, so it measures generalization, not memorization.",
+        "start": 28.789999999999996,
+        "end": 37.51,
+        "file": "04-data-3.wav"
+      },
+      {
+        "text": "We run the generator as a project command: four hundred training tickets and forty eval tickets.",
+        "start": 37.86,
+        "end": 43.62,
+        "file": "04-data-4.wav"
+      }
+    ],
+    "start": 70.845,
+    "speed": 1.0
+  },
+  {
+    "id": "05-try",
+    "section": "04 / TRY THE BASE MODEL",
+    "title": "Does it work\nout of the box?",
+    "benefit": "Serve any model as an OpenAI-compatible endpoint in one click.",
+    "tag": "BUILT-IN ENGINE \u00b7 INFERENCE PLAYGROUND",
+    "lines": [
+      "Before training anything, let's see how the base model does. In Serve and evaluate, we serve Qwen with the built-in engine. It comes up as an OpenAI-compatible endpoint, and joins our model connections.",
+      "In the playground, we send a real ticket, with the same instructions the evaluation uses.",
+      "It answers, but wraps the JSON in a code block, and gets the category and the product wrong. The playground also shows latency, token counts, and tokens per second for every reply."
+    ],
+    "recorded": 34.035,
+    "duration": 32.414,
+    "captions": [
+      {
+        "text": "Before training anything, let's see how the base model does. In Serve and evaluate, we serve Qwen with the built-in engine. It comes up as an OpenAI-compatible endpoint, and joins our model connections.",
+        "start": 0.7,
+        "end": 12.7,
+        "file": "05-try-0.wav"
+      },
+      {
+        "text": "In the playground, we send a real ticket, with the same instructions the evaluation uses.",
+        "start": 13.049999999999999,
+        "end": 18.41,
+        "file": "05-try-1.wav"
+      },
+      {
+        "text": "It answers, but wraps the JSON in a code block, and gets the category and the product wrong. The playground also shows latency, token counts, and tokens per second for every reply.",
+        "start": 18.759999999999998,
+        "end": 30.519999999999996,
+        "file": "05-try-2.wav"
+      }
+    ],
+    "start": 115.89,
+    "speed": 1.05
+  },
+  {
+    "id": "06-baseline",
+    "section": "05 / MEASURE THE BASELINE",
+    "title": "Measure before\nyou train.",
+    "benefit": "Verifiable scorers turn a hunch into a number.",
+    "tag": "40 HELD-OUT TICKETS \u00b7 VERIFIABLE REWARDS",
+    "lines": [
+      "One example proves nothing, so we evaluate all forty held-out tickets against the served model.",
+      "We pick two verifiable scorers. JSON match needs every field exactly right. A Python reward function gives a quarter point for each correct field.",
+      "The cases stream in as the model answers them."
+    ],
+    "recorded": 28,
+    "duration": 21.053,
+    "captions": [
+      {
+        "text": "One example proves nothing, so we evaluate all forty held-out tickets against the served model.",
+        "start": 0.7,
+        "end": 6.54,
+        "file": "06-baseline-0.wav"
+      },
+      {
+        "text": "We pick two verifiable scorers. JSON match needs every field exactly right. A Python reward function gives a quarter point for each correct field.",
+        "start": 6.89,
+        "end": 15.850000000000001,
+        "file": "06-baseline-1.wav"
+      },
+      {
+        "text": "The cases stream in as the model answers them.",
+        "start": 16.2,
+        "end": 19.24,
+        "file": "06-baseline-2.wav"
+      }
+    ],
+    "start": 148.304,
+    "speed": 1.33
+  },
+  {
+    "id": "07-baseline-results",
+    "section": "05 / MEASURE THE BASELINE",
+    "title": "A clear\nstarting point.",
+    "benefit": "Every case opens as a trace with each scorer's verdict.",
+    "tag": "RUN TREE \u00b7 SCORER REASONS",
+    "lines": [
+      "The base model gets {b_exact} percent of tickets fully right, and {b_fields} percent of fields. That is our baseline.",
+      "Every case opens as a trace: the prompt, the model's reply, and each scorer's verdict, with its reason."
+    ],
+    "recorded": 33.058,
+    "duration": 16.612,
+    "captions": [
+      {
+        "text": "The base model gets 0 percent of tickets fully right, and 26 percent of fields. That is our baseline.",
+        "start": 0.7,
+        "end": 7.5,
+        "file": "07-baseline-results-0.wav"
+      },
+      {
+        "text": "Every case opens as a trace: the prompt, the model's reply, and each scorer's verdict, with its reason.",
+        "start": 7.85,
+        "end": 14.809999999999999,
+        "file": "07-baseline-results-1.wav"
+      }
+    ],
+    "start": 169.357,
+    "speed": 1.99
+  },
+  {
+    "id": "08-train",
+    "section": "06 / FINE-TUNE",
+    "title": "Teach it\nthe policy.",
+    "benefit": "A small LoRA adapter; the base weights stay untouched.",
+    "tag": "LORA \u00b7 TRANSFORMERS + PEFT \u00b7 APPLE MPS",
+    "lines": [
+      "Now we fine-tune. The base model, the training set, one hundred fifty steps, batch size four, and LoRA rank sixteen. We train a small adapter, and the base weights stay untouched.",
+      "Chat examples are trained in the model's own chat format, and the loss counts only the answer.",
+      "The loss streams in live while the job runs on Apple Silicon. This run took about {train1_min} minutes."
+    ],
+    "recorded": 75.802,
+    "duration": 26.976,
+    "captions": [
+      {
+        "text": "Now we fine-tune. The base model, the training set, one hundred fifty steps, batch size four, and LoRA rank sixteen. We train a small adapter, and the base weights stay untouched.",
+        "start": 0.7,
+        "end": 13.26,
+        "file": "08-train-0.wav"
+      },
+      {
+        "text": "Chat examples are trained in the model's own chat format, and the loss counts only the answer.",
+        "start": 13.61,
+        "end": 19.05,
+        "file": "08-train-1.wav"
+      },
+      {
+        "text": "The loss streams in live while the job runs on Apple Silicon. This run took about 5 minutes.",
+        "start": 19.4,
+        "end": 25.159999999999997,
+        "file": "08-train-2.wav"
+      }
+    ],
+    "start": 185.969,
+    "speed": 2.81
+  },
+  {
+    "id": "09-eval1",
+    "section": "07 / EVALUATE AGAIN",
+    "title": "Same test,\nnew model.",
+    "benefit": "Serve the adapter and rerun the exact same evaluation.",
+    "tag": "SAME 40 TICKETS \u00b7 SAME SCORERS",
+    "lines": [
+      "We serve the new adapter with the same engine, and run the exact same evaluation on the same forty tickets.",
+      "The adapter loads on top of the base weights in a few seconds, and the cases start streaming in."
+    ],
+    "recorded": 44.465,
+    "duration": 14.822,
+    "captions": [
+      {
+        "text": "We serve the new adapter with the same engine, and run the exact same evaluation on the same forty tickets.",
+        "start": 0.7,
+        "end": 6.94,
+        "file": "09-eval1-0.wav"
+      },
+      {
+        "text": "The adapter loads on top of the base weights in a few seconds, and the cases start streaming in.",
+        "start": 7.29,
+        "end": 12.809999999999999,
+        "file": "09-eval1-1.wav"
+      }
+    ],
+    "start": 212.945,
+    "speed": 3.0
+  },
+  {
+    "id": "10-eval1-results",
+    "section": "07 / EVALUATE AGAIN",
+    "title": "Better.\nNot done.",
+    "benefit": "Failing traces show what the data is missing.",
+    "tag": "ERROR ANALYSIS",
+    "lines": [
+      "Fully correct tickets go from {b_exact} to {r1_exact} percent, and field accuracy from {b_fields} to {r1_fields} percent. The answers also got shorter.",
+      "But we are not done. Reading the failing cases shows a pattern: urgency and escalation worded in ways the training data never used, like nobody at our company can work right now."
+    ],
+    "recorded": 27.301,
+    "duration": 22.196,
+    "captions": [
+      {
+        "text": "Fully correct tickets go from 0 to 55 percent, and field accuracy from 26 to 87 percent. The answers also got shorter.",
+        "start": 0.7,
+        "end": 9.18,
+        "file": "10-eval1-results-0.wav"
+      },
+      {
+        "text": "But we are not done. Reading the failing cases shows a pattern: urgency and escalation worded in ways the training data never used, like nobody at our company can work right now.",
+        "start": 9.53,
+        "end": 20.33,
+        "file": "10-eval1-results-1.wav"
+      }
+    ],
+    "start": 227.767,
+    "speed": 1.23
+  },
+  {
+    "id": "11-round2",
+    "section": "08 / FIX THE DATA",
+    "title": "Read failures,\nfix the data.",
+    "benefit": "Broaden coverage. Never touch the eval set.",
+    "tag": "ROUND 2 \u00b7 600 TRAINING TICKETS",
+    "lines": [
+      "So we fix the data, not the model. Round two of the generator adds new phrasings for urgency, escalation, and product names.",
+      "They are new paraphrases, not copies of eval tickets, and the eval set stays byte for byte the same.",
+      "Six hundred training tickets. We fine-tune again from the base model, this time for two hundred steps."
+    ],
+    "recorded": 67.606,
+    "duration": 24.319,
+    "captions": [
+      {
+        "text": "So we fix the data, not the model. Round two of the generator adds new phrasings for urgency, escalation, and product names.",
+        "start": 0.7,
+        "end": 9.18,
+        "file": "11-round2-0.wav"
+      },
+      {
+        "text": "They are new paraphrases, not copies of eval tickets, and the eval set stays byte for byte the same.",
+        "start": 9.53,
+        "end": 15.93,
+        "file": "11-round2-1.wav"
+      },
+      {
+        "text": "Six hundred training tickets. We fine-tune again from the base model, this time for two hundred steps.",
+        "start": 16.28,
+        "end": 22.520000000000003,
+        "file": "11-round2-2.wav"
+      }
+    ],
+    "start": 249.963,
+    "speed": 2.78
+  },
+  {
+    "id": "12-eval2",
+    "section": "09 / EVALUATE ROUND 2",
+    "title": "Add a\nsecond opinion.",
+    "benefit": "Agent review grades judgment calls with a rubric.",
+    "tag": "VERIFIABLE REWARDS + AGENT REVIEW",
+    "lines": [
+      "We serve the round two adapter and evaluate it the same way.",
+      "This time we also add an agent review scorer, with a rubric. A coding agent will grade each answer as a support lead would."
+    ],
+    "recorded": 49.081,
+    "duration": 16.36,
+    "captions": [
+      {
+        "text": "We serve the round two adapter and evaluate it the same way.",
+        "start": 0.7,
+        "end": 4.54,
+        "file": "12-eval2-0.wav"
+      },
+      {
+        "text": "This time we also add an agent review scorer, with a rubric. A coding agent will grade each answer as a support lead would.",
+        "start": 4.89,
+        "end": 12.09,
+        "file": "12-eval2-1.wav"
+      }
+    ],
+    "start": 274.282,
+    "speed": 3.0
+  },
+  {
+    "id": "13-eval2-results",
+    "section": "09 / EVALUATE ROUND 2",
+    "title": "Progress you\ncan show.",
+    "benefit": "Every experiment side by side.",
+    "tag": "EXPERIMENTS TABLE",
+    "lines": [
+      "Round two: {r2_exact} percent of tickets fully correct, and {r2_fields} percent of fields.",
+      "The Experiments table keeps every run side by side: baseline, round one, and round two, with scores, latency, speed, and tokens."
+    ],
+    "recorded": 18.331,
+    "duration": 18.331,
+    "captions": [
+      {
+        "text": "Round two: 70 percent of tickets fully correct, and 91 percent of fields.",
+        "start": 0.7,
+        "end": 6.3,
+        "file": "13-eval2-results-0.wav"
+      },
+      {
+        "text": "The Experiments table keeps every run side by side: baseline, round one, and round two, with scores, latency, speed, and tokens.",
+        "start": 6.6499999999999995,
+        "end": 15.689999999999998,
+        "file": "13-eval2-results-1.wav"
+      }
+    ],
+    "start": 290.642,
+    "speed": 1.0
+  },
+  {
+    "id": "14-agent",
+    "section": "10 / LET AN AGENT REVIEW",
+    "title": "A coding agent\nas a grader.",
+    "benefit": "Your coding agent reads cases and submits scores over MCP.",
+    "tag": "MCP \u00b7 SCOPED CREDENTIAL \u00b7 CODEX CLI",
+    "lines": [
+      "The agent review is waiting. In External agents, we issue a scoped credential for this workspace.",
+      "Then we start Codex in the IDE terminal, connected to the workspace over MCP, and ask it to grade the evaluation. Claude Code connects the same way.",
+      "It reads every case through MCP, judges it against the rubric, and submits its scores back to the IDE."
+    ],
+    "recorded": 44.253,
+    "duration": 25.433,
+    "captions": [
+      {
+        "text": "The agent review is waiting. In External agents, we issue a scoped credential for this workspace.",
+        "start": 0.7,
+        "end": 6.62,
+        "file": "14-agent-0.wav"
+      },
+      {
+        "text": "Then we start Codex in the IDE terminal, connected to the workspace over MCP, and ask it to grade the evaluation. Claude Code connects the same way.",
+        "start": 6.97,
+        "end": 16.81,
+        "file": "14-agent-1.wav"
+      },
+      {
+        "text": "It reads every case through MCP, judges it against the rubric, and submits its scores back to the IDE.",
+        "start": 17.16,
+        "end": 23.64,
+        "file": "14-agent-2.wav"
+      }
+    ],
+    "start": 308.973,
+    "speed": 1.74
+  },
+  {
+    "id": "15-agent-results",
+    "section": "10 / LET AN AGENT REVIEW",
+    "title": "Scores with\nreasons.",
+    "benefit": "Agent grades land next to the verifiable scores.",
+    "tag": "REAL CODEX RUN",
+    "lines": [
+      "Codex finished. Its grades land in the same table: an average of {agent_mean}, with a reason on every case.",
+      "Exact scorers catch formatting and field mistakes. The agent catches whether a decision is defensible."
+    ],
+    "recorded": 31.503,
+    "duration": 16.494,
+    "captions": [
+      {
+        "text": "Codex finished. Its grades land in the same table: an average of 0.81, with a reason on every case.",
+        "start": 0.7,
+        "end": 8.219999999999999,
+        "file": "15-agent-results-0.wav"
+      },
+      {
+        "text": "Exact scorers catch formatting and field mistakes. The agent catches whether a decision is defensible.",
+        "start": 8.569999999999999,
+        "end": 14.729999999999999,
+        "file": "15-agent-results-1.wav"
+      }
+    ],
+    "start": 334.406,
+    "speed": 1.91
+  },
+  {
+    "id": "16-speed",
+    "section": "11 / SERVE IT FAST",
+    "title": "Same model,\nfaster engine.",
+    "benefit": "vLLM, SGLang, or MLX behind the same API.",
+    "tag": "VLLM \u00b7 MERGED ADAPTER \u00b7 8 PARALLEL REQUESTS",
+    "lines": [
+      "Finally, serving. The built-in engine handles one request at a time: {t_tps} tokens per second for the fine-tuned model on this laptop.",
+      "We serve the same fine-tuned model with vLLM. The IDE merges the adapter into full weights once, and starts vLLM's OpenAI-compatible server.",
+      "Then we rerun the evaluation, with eight requests in parallel."
+    ],
+    "recorded": 27.565,
+    "duration": 26.505,
+    "captions": [
+      {
+        "text": "Finally, serving. The built-in engine handles one request at a time: 27.4 tokens per second for the fine-tuned model on this laptop.",
+        "start": 0.7,
+        "end": 9.979999999999999,
+        "file": "16-speed-0.wav"
+      },
+      {
+        "text": "We serve the same fine-tuned model with vLLM. The IDE merges the adapter into full weights once, and starts vLLM's OpenAI-compatible server.",
+        "start": 10.329999999999998,
+        "end": 20.089999999999996,
+        "file": "16-speed-1.wav"
+      },
+      {
+        "text": "Then we rerun the evaluation, with eight requests in parallel.",
+        "start": 20.439999999999998,
+        "end": 24.68,
+        "file": "16-speed-2.wav"
+      }
+    ],
+    "start": 350.9,
+    "speed": 1.04
+  },
+  {
+    "id": "17-speed-results",
+    "section": "11 / SERVE IT FAST",
+    "title": "Measure the\nspeed, too.",
+    "benefit": "Tokens per second, per request and in total.",
+    "tag": "INFERENCE METRICS",
+    "lines": [
+      "With eight requests in parallel, vLLM delivers {v_total} tokens per second in total, about {speedup} times the built-in engine, while each request still runs at {v_tps}. Median latency drops from {t_p50} to {v_p50} seconds, and quality stays the same.",
+      "The tips panel lists what else helps: batching, fewer output tokens, merged adapters, quantization, or a GPU.",
+      "And the fine-tuned model answers our ticket correctly, in clean JSON."
+    ],
+    "recorded": 73.4,
+    "duration": 34.14,
+    "captions": [
+      {
+        "text": "With eight requests in parallel, vLLM delivers 72.6 tokens per second in total, about 2.7 times the built-in engine, while each request still runs at 35.7. Median latency drops from 0.8 to 0.6 seconds, and quality stays the same.",
+        "start": 0.7,
+        "end": 18.779999999999998,
+        "file": "17-speed-results-0.wav"
+      },
+      {
+        "text": "The tips panel lists what else helps: batching, fewer output tokens, merged adapters, quantization, or a GPU.",
+        "start": 19.13,
+        "end": 27.45,
+        "file": "17-speed-results-1.wav"
+      },
+      {
+        "text": "And the fine-tuned model answers our ticket correctly, in clean JSON.",
+        "start": 27.799999999999997,
+        "end": 32.36,
+        "file": "17-speed-results-2.wav"
+      }
+    ],
+    "start": 377.405,
+    "speed": 2.15
+  },
+  {
+    "id": "18-outro",
+    "section": "RESULTS",
+    "title": "From guess\nto evidence.",
+    "benefit": "Every step is a recorded run you can trace, compare, and hand to an agent.",
+    "tag": "AI ENGINEERING IDE \u00b7 PREVIEW",
+    "card": "results",
+    "lines": [
+      "From an empty folder: a model that couldn't do the job, a golden dataset, two fine-tuning rounds, and a measured jump from {b_exact} to {r2_exact} percent of tickets fully correct.",
+      "Every step was a recorded run that you can trace, compare, and hand to an agent.",
+      "One caveat: the data is synthetic and the eval set is small. For production, keep a second untouched test set, and evaluate on real tickets."
+    ],
+    "recorded": 0,
+    "duration": 25.88,
+    "captions": [
+      {
+        "text": "From an empty folder: a model that couldn't do the job, a golden dataset, two fine-tuning rounds, and a measured jump from 0 to 70 percent of tickets fully correct.",
+        "start": 0.7,
+        "end": 10.54,
+        "file": "18-outro-0.wav"
+      },
+      {
+        "text": "Every step was a recorded run that you can trace, compare, and hand to an agent.",
+        "start": 10.889999999999999,
+        "end": 15.93,
+        "file": "18-outro-1.wav"
+      },
+      {
+        "text": "One caveat: the data is synthetic and the eval set is small. For production, keep a second untouched test set, and evaluate on real tickets.",
+        "start": 16.279999999999998,
+        "end": 25.08,
+        "file": "18-outro-2.wav"
+      }
+    ],
+    "start": 411.54499999999996,
+    "speed": 1.0
+  }
+]

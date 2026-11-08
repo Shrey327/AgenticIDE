@@ -1823,3 +1823,24 @@ details.aiide-card {
   max-width: 260px;
   overflow-wrap: anywhere;
 }
+.aiide-block {
+  display: block;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+.aiide-tips {
+  margin: 4px 0 14px;
+  font-size: 12px;
+}
+.aiide-tips summary {
+  cursor: pointer;
+  color: var(--aiide-accent);
+}
+.aiide-tips ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+.aiide-tips li {
+  opacity: 0.85;
+}

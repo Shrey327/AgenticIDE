@@ -22,3 +22,9 @@ resources/plugins/
 
 apps/*/gen-esbuild.*.mjs
 artifacts/qwen-smoke/
+artifacts/finetune-demo/recording/
+artifacts/finetune-demo/assets/*.wav
+artifacts/finetune-demo/assets/*.webm
+artifacts/finetune-demo/assets/*-final.mp4
+artifacts/finetune-demo/assets/*-frame-*.png
+artifacts/finetune-demo/assets/record-failure.png

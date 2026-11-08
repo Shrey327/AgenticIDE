@@ -35,7 +35,7 @@ const scorerInfo: { type: string; label: string; text: string }[] = [
   { type: 'regex', label: 'Regex', text: 'Output matches a pattern' },
   {
     type: 'json',
-    label: 'Valid JSON',
+    label: 'JSON match',
     text: 'Parses; equals expected JSON if given',
   },
   {
@@ -110,7 +110,9 @@ export function EvalsPanel({
     [system, setSystem] = React.useState(''),
     [temperature, setTemperature] = React.useState(0),
     [maxTokens, setMaxTokens] = React.useState(256),
-    [thinking, setThinking] = React.useState(false);
+    [thinking, setThinking] = React.useState(false),
+    [concurrency, setConcurrency] = React.useState(4),
+    [experiment, setExperiment] = React.useState('');
   const [enabled, setEnabled] = React.useState<Set<string>>(
       new Set(['contains', 'tool_call']),
     ),
@@ -261,6 +263,36 @@ export function EvalsPanel({
           and adds it to your model connections. Install vLLM, SGLang or mlx-lm
           into the project environment (or on PATH) to enable them.
         </p>
+        <details className="aiide-tips">
+          <summary>How to make inference faster</summary>
+          <ul>
+            <li>
+              <strong>Use a serving engine.</strong> vLLM and SGLang batch
+              requests and manage the KV cache (PagedAttention /
+              RadixAttention); MLX runs natively on Apple Silicon. The built-in
+              engine generates one request at a time.
+            </li>
+            <li>
+              <strong>Send requests in parallel.</strong> Per-request speed
+              stays similar, but total throughput grows with batching. Compare
+              “per request” and “total” in Experiments.
+            </li>
+            <li>
+              <strong>Cut generated tokens.</strong> Lower max output tokens,
+              keep thinking off for short answers, and fine-tune for concise
+              outputs: fewer tokens is the cheapest speed-up.
+            </li>
+            <li>
+              <strong>Merge the adapter.</strong> External engines serve merged
+              weights, so LoRA adds no per-token overhead.
+            </li>
+            <li>
+              <strong>Quantize or use a GPU.</strong> 4/8-bit weights (AWQ,
+              GPTQ, MLX 4-bit) and CUDA hardware raise tokens per second
+              further.
+            </li>
+          </ul>
+        </details>
         {!models.length && (
           <p className="aiide-note">
             No models yet. Download or fine-tune one in Hugging Face &
@@ -327,6 +359,14 @@ export function EvalsPanel({
         <h3 id="eval-title">2. Set up an evaluation</h3>
         <div className="aiide-form-grid">
           <label>
+            Experiment name
+            <input
+              value={experiment}
+              placeholder="e.g. baseline, round-2"
+              onChange={(e) => setExperiment(e.target.value)}
+            />
+          </label>
+          <label>
             Eval dataset (JSONL)
             <select
               value={dataset}
@@ -368,6 +408,16 @@ export function EvalsPanel({
               max={8192}
               value={maxTokens}
               onChange={(e) => setMaxTokens(Number(e.target.value))}
+            />
+          </label>
+          <label>
+            Parallel requests
+            <input
+              type="number"
+              min={1}
+              max={8}
+              value={concurrency}
+              onChange={(e) => setConcurrency(Number(e.target.value))}
             />
           </label>
         </div>
@@ -477,12 +527,14 @@ export function EvalsPanel({
           onClick={() =>
             act(async () => {
               const run = await call('evals.run', {
+                name: experiment.trim() || undefined,
                 dataset,
                 target,
                 system: system || undefined,
                 temperature,
                 maxTokens,
                 thinking,
+                concurrency,
                 scorers,
               });
               setSelected(run.id);
@@ -509,6 +561,7 @@ export function EvalsPanel({
                   <th>Progress</th>
                   <th>Scores</th>
                   <th>p50 latency</th>
+                  <th>Speed (output tok/s)</th>
                   <th>Tokens</th>
                 </tr>
               </thead>
@@ -567,6 +620,23 @@ export function EvalsPanel({
                     </td>
                     <td>{duration(e.summary.latency.p50)}</td>
                     <td>
+                      {e.summary.throughput ? (
+                        <>
+                          <strong>
+                            {e.summary.throughput.perRequest.toFixed(1)}
+                          </strong>{' '}
+                          <small>per request</small>
+                          <br />
+                          <strong>
+                            {e.summary.throughput.aggregate.toFixed(1)}
+                          </strong>{' '}
+                          <small>total ({e.config.concurrency} parallel)</small>
+                        </>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td>
                       {(
                         e.summary.tokens.input + e.summary.tokens.output
                       ).toLocaleString()}
@@ -624,6 +694,23 @@ export function EvalsPanel({
                 </div>
               );
             })}
+            {detail.summary.throughput && (
+              <div>
+                <small>OUTPUT TOKENS / SECOND</small>
+                <strong>
+                  {detail.summary.throughput.perRequest.toFixed(1)}
+                </strong>
+                <small>
+                  per request · {detail.summary.throughput.aggregate.toFixed(1)}{' '}
+                  total with {detail.config.concurrency} parallel
+                </small>
+              </div>
+            )}
+            <div>
+              <small>LATENCY</small>
+              <strong>{duration(detail.summary.latency.p50)}</strong>
+              <small>p50 · p95 {duration(detail.summary.latency.p95)}</small>
+            </div>
           </div>
           {pendingAgent > 0 && detail.status !== 'running' && (
             <div className="aiide-callout">
@@ -699,7 +786,16 @@ export function EvalsPanel({
                         )}
                       </td>
                     ))}
-                    <td>{duration(c.latencyMs)}</td>
+                    <td>
+                      {duration(c.latencyMs)}
+                      {c.tokens?.output ? (
+                        <small className="aiide-block">
+                          {c.tokens.output} tok ·{' '}
+                          {(c.tokens.output / (c.latencyMs / 1000)).toFixed(1)}{' '}
+                          tok/s
+                        </small>
+                      ) : null}
+                    </td>
                   </tr>
                 ))}
               </tbody>

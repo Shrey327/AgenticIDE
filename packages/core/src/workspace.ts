@@ -494,6 +494,10 @@ export class Workspace {
               temperature <= 2 && { temperature }),
             ...(maxTokens > 0 &&
               maxTokens <= 32768 && { max_tokens: maxTokens }),
+            // Same default as evaluations: IDE-served reasoning models answer without thinking.
+            ...(connection.id.startsWith('serve-') && {
+              chat_template_kwargs: { enable_thinking: false },
+            }),
           })
         ).json();
         return {

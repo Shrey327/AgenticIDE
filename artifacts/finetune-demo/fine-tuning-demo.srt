@@ -1,0 +1,191 @@
+1
+00:00:00,700 --> 00:00:09,500
+Here is a common job for a small model: triage support tickets for a company called Lumen, and answer in strict JSON that other tools can rely on.
+
+2
+00:00:09,850 --> 00:00:21,770
+Each ticket needs a category, a priority, the product, and whether a human must step in. The priority and escalation rules are Lumen's own policy, so no model knows them out of the box.
+
+3
+00:00:22,120 --> 00:00:32,360
+We'll start from an empty folder, measure how a small open model does, build a golden dataset, fine-tune, and prove it got better. All of it in AI Engineering IDE.
+
+4
+00:00:33,860 --> 00:00:39,860
+We open an empty folder and create a project from the PEFT fine-tuning template, called ticket triage.
+
+5
+00:00:40,210 --> 00:00:48,530
+The IDE switches into the new project. It already has instrumentation, an evaluation example, and a locked environment definition.
+
+6
+00:00:50,030 --> 00:00:57,710
+On the Hugging Face page, we install the locked environment: PyTorch, Transformers, and PEFT, isolated to this project.
+
+7
+00:00:58,060 --> 00:01:09,100
+Then we download Qwen3 0.6B, a six hundred million parameter open model, about one point two gigabytes. The IDE records the exact commit it downloaded.
+
+8
+00:01:11,545 --> 00:01:18,505
+Next, the data. We added a small generator script to the project. Its docstring is the triage policy.
+
+9
+00:01:18,855 --> 00:01:31,975
+P1 for outages, data loss, or a whole team blocked. P2 when one person is blocked or a payment fails. And a human must step in for refunds, cancellations, legal, or security.
+
+10
+00:01:32,325 --> 00:01:39,285
+Every example is labeled by that policy, so every answer is known to be correct. That is our golden dataset.
+
+11
+00:01:39,635 --> 00:01:48,355
+The eval set is held out: forty tickets with different wording and product names than the training data, so it measures generalization, not memorization.
+
+12
+00:01:48,705 --> 00:01:54,465
+We run the generator as a project command: four hundred training tickets and forty eval tickets.
+
+13
+00:01:56,590 --> 00:02:08,590
+Before training anything, let's see how the base model does. In Serve and evaluate, we serve Qwen with the built-in engine. It comes up as an OpenAI-compatible endpoint, and joins our model connections.
+
+14
+00:02:08,940 --> 00:02:14,300
+In the playground, we send a real ticket, with the same instructions the evaluation uses.
+
+15
+00:02:14,650 --> 00:02:26,410
+It answers, but wraps the JSON in a code block, and gets the category and the product wrong. The playground also shows latency, token counts, and tokens per second for every reply.
+
+16
+00:02:29,004 --> 00:02:34,844
+One example proves nothing, so we evaluate all forty held-out tickets against the served model.
+
+17
+00:02:35,194 --> 00:02:44,154
+We pick two verifiable scorers. JSON match needs every field exactly right. A Python reward function gives a quarter point for each correct field.
+
+18
+00:02:44,504 --> 00:02:47,544
+The cases stream in as the model answers them.
+
+19
+00:02:50,057 --> 00:02:56,857
+The base model gets 0 percent of tickets fully right, and 26 percent of fields. That is our baseline.
+
+20
+00:02:57,207 --> 00:03:04,167
+Every case opens as a trace: the prompt, the model's reply, and each scorer's verdict, with its reason.
+
+21
+00:03:06,669 --> 00:03:19,229
+Now we fine-tune. The base model, the training set, one hundred fifty steps, batch size four, and LoRA rank sixteen. We train a small adapter, and the base weights stay untouched.
+
+22
+00:03:19,579 --> 00:03:25,019
+Chat examples are trained in the model's own chat format, and the loss counts only the answer.
+
+23
+00:03:25,369 --> 00:03:31,129
+The loss streams in live while the job runs on Apple Silicon. This run took about 5 minutes.
+
+24
+00:03:33,645 --> 00:03:39,885
+We serve the new adapter with the same engine, and run the exact same evaluation on the same forty tickets.
+
+25
+00:03:40,235 --> 00:03:45,755
+The adapter loads on top of the base weights in a few seconds, and the cases start streaming in.
+
+26
+00:03:48,467 --> 00:03:56,947
+Fully correct tickets go from 0 to 55 percent, and field accuracy from 26 to 87 percent. The answers also got shorter.
+
+27
+00:03:57,297 --> 00:04:08,097
+But we are not done. Reading the failing cases shows a pattern: urgency and escalation worded in ways the training data never used, like nobody at our company can work right now.
+
+28
+00:04:10,663 --> 00:04:19,143
+So we fix the data, not the model. Round two of the generator adds new phrasings for urgency, escalation, and product names.
+
+29
+00:04:19,493 --> 00:04:25,893
+They are new paraphrases, not copies of eval tickets, and the eval set stays byte for byte the same.
+
+30
+00:04:26,243 --> 00:04:32,483
+Six hundred training tickets. We fine-tune again from the base model, this time for two hundred steps.
+
+31
+00:04:34,982 --> 00:04:38,822
+We serve the round two adapter and evaluate it the same way.
+
+32
+00:04:39,172 --> 00:04:46,372
+This time we also add an agent review scorer, with a rubric. A coding agent will grade each answer as a support lead would.
+
+33
+00:04:51,342 --> 00:04:56,942
+Round two: 70 percent of tickets fully correct, and 91 percent of fields.
+
+34
+00:04:57,292 --> 00:05:06,332
+The Experiments table keeps every run side by side: baseline, round one, and round two, with scores, latency, speed, and tokens.
+
+35
+00:05:09,673 --> 00:05:15,593
+The agent review is waiting. In External agents, we issue a scoped credential for this workspace.
+
+36
+00:05:15,943 --> 00:05:25,783
+Then we start Codex in the IDE terminal, connected to the workspace over MCP, and ask it to grade the evaluation. Claude Code connects the same way.
+
+37
+00:05:26,133 --> 00:05:32,613
+It reads every case through MCP, judges it against the rubric, and submits its scores back to the IDE.
+
+38
+00:05:35,106 --> 00:05:42,626
+Codex finished. Its grades land in the same table: an average of 0.81, with a reason on every case.
+
+39
+00:05:42,976 --> 00:05:49,136
+Exact scorers catch formatting and field mistakes. The agent catches whether a decision is defensible.
+
+40
+00:05:51,600 --> 00:06:00,880
+Finally, serving. The built-in engine handles one request at a time: 27.4 tokens per second for the fine-tuned model on this laptop.
+
+41
+00:06:01,230 --> 00:06:10,990
+We serve the same fine-tuned model with vLLM. The IDE merges the adapter into full weights once, and starts vLLM's OpenAI-compatible server.
+
+42
+00:06:11,340 --> 00:06:15,580
+Then we rerun the evaluation, with eight requests in parallel.
+
+43
+00:06:18,105 --> 00:06:36,185
+With eight requests in parallel, vLLM delivers 72.6 tokens per second in total, about 2.7 times the built-in engine, while each request still runs at 35.7. Median latency drops from 0.8 to 0.6 seconds, and quality stays the same.
+
+44
+00:06:36,535 --> 00:06:44,855
+The tips panel lists what else helps: batching, fewer output tokens, merged adapters, quantization, or a GPU.
+
+45
+00:06:45,205 --> 00:06:49,765
+And the fine-tuned model answers our ticket correctly, in clean JSON.
+
+46
+00:06:52,245 --> 00:07:02,085
+From an empty folder: a model that couldn't do the job, a golden dataset, two fine-tuning rounds, and a measured jump from 0 to 70 percent of tickets fully correct.
+
+47
+00:07:02,435 --> 00:07:07,475
+Every step was a recorded run that you can trace, compare, and hand to an agent.
+
+48
+00:07:07,825 --> 00:07:16,625
+One caveat: the data is synthetic and the eval set is small. For production, keep a second untouched test set, and evaluate on real tickets.

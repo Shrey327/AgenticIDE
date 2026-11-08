@@ -1,0 +1,7 @@
+file '06-baseline-frame-0.png'
+duration 6.890
+file '06-baseline-frame-1.png'
+duration 9.310
+file '06-baseline-frame-2.png'
+duration 4.853
+file '06-baseline-frame-2.png'

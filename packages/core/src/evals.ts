@@ -157,7 +157,7 @@ export function scorerNames(scorers: Scorer[]) {
     exact: 'exact_match',
     contains: 'contains',
     regex: 'regex',
-    json: 'valid_json',
+    json: 'json_match',
     tool_call: 'tool_call',
     judge: 'llm_judge',
     agent: 'agent_review',
@@ -264,11 +264,30 @@ export function summarize(cases: EvalCase[], names: string[]) {
     };
   }
   const latency = cases.filter((c) => !c.error).map((c) => c.latencyMs);
+  const outputTokens = cases.reduce((a, c) => a + (c.tokens?.output || 0), 0);
+  const speeds = cases
+    .filter((c) => !c.error && c.tokens?.output && c.latencyMs > 0)
+    .map((c) => c.tokens!.output! / (c.latencyMs / 1000));
+  // Wall clock from the first request to the last model reply, so batching across requests shows up.
+  const calls = cases.flatMap((c) => {
+    const root = c.trace.find((n) => !n.parent);
+    const llm = c.trace.find((n) => n.kind === 'llm' && n.parent === root?.id);
+    return llm ? [llm] : [];
+  });
+  const wallMs = calls.length
+    ? Math.max(...calls.map((n) => n.end)) -
+      Math.min(...calls.map((n) => n.start))
+    : 0;
   return {
     scorers,
     done: cases.length,
     errors: cases.filter((c) => c.error).length,
     latency: { p50: percentile(latency, 0.5), p95: percentile(latency, 0.95) },
+    /** Output tokens per second: one request at a time (median) and across concurrent requests. */
+    throughput: {
+      perRequest: percentile(speeds, 0.5),
+      aggregate: wallMs > 0 ? outputTokens / (wallMs / 1000) : 0,
+    },
     tokens: {
       input: cases.reduce((a, c) => a + (c.tokens?.input || 0), 0),
       output: cases.reduce((a, c) => a + (c.tokens?.output || 0), 0),
@@ -893,14 +912,15 @@ def score(output, expected, case, tool_calls):
   }
   private addEvaluator(runId: string, c: EvalCase, name: string, score: Score) {
     const root = c.trace.find((node) => !node.parent);
-    const now = Date.now();
+    // Scored after the case finished; place it at the case's end so the timeline stays readable.
+    const at = root?.end ?? Date.now();
     const node: TraceNode = {
       id: hex(8),
       parent: root?.id,
       name,
       kind: 'evaluator',
-      start: now,
-      end: now,
+      start: at,
+      end: at,
       status: 'ok',
       score: score.score,
       output: score,

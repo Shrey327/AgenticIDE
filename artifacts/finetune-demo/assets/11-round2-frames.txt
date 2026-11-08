@@ -1,0 +1,7 @@
+file '11-round2-frame-0.png'
+duration 9.530
+file '11-round2-frame-1.png'
+duration 6.750
+file '11-round2-frame-2.png'
+duration 8.039
+file '11-round2-frame-2.png'

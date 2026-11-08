@@ -163,6 +163,7 @@ test('evaluation run records cases, traces, judge scores and agent grades', asyn
     ['chain', 'evaluator', 'evaluator', 'llm', 'llm', 'tool'].sort(),
   );
   assert.equal(result.summary.scorers.agent_review.pending, 2);
+  assert.ok(result.summary.throughput.perRequest > 0 && result.summary.throughput.aggregate > 0);
   assert.equal(
     store.spans(run.id).total,
     tool.trace.length + text.trace.length,
