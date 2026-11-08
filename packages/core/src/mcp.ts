@@ -197,6 +197,9 @@ export class McpEndpoint {
                 'hf.status',
                 'hf.files',
                 'hf.models',
+                'serving.list',
+                'evals.files',
+                'evals.list',
               ]),
               file: z.string().max(500).optional(),
             },
@@ -214,6 +217,11 @@ export class McpEndpoint {
               return result.filter((entry: any) => !excluded(entry.file));
             if (a.operation === 'hf.files')
               return result.filter((file: string) => !excluded(file));
+            if (a.operation === 'evals.files')
+              return {
+                datasets: result.datasets.filter((f: string) => !excluded(f)),
+                scripts: result.scripts.filter((f: string) => !excluded(f)),
+              };
             if (
               a.operation === 'lab.models' &&
               !grant.scopes.includes('workflow')
@@ -269,6 +277,10 @@ export class McpEndpoint {
                 'hf.train',
                 'hf.generate',
                 'hf.result',
+                'serving.start',
+                'evals.run',
+                'evals.get',
+                'evals.score',
                 'runs.cancel',
               ]),
               args: z.record(z.string(), z.unknown()).default({}),
@@ -279,9 +291,16 @@ export class McpEndpoint {
               ? a.args.config?.file
               : a.operation === 'lab.predict'
                 ? a.args.file
-                : a.operation === 'hf.train'
+                : ['hf.train', 'evals.run'].includes(a.operation)
                   ? a.args.dataset
                   : undefined;
+            if (
+              a.operation === 'evals.run' &&
+              a.args.scorers?.some?.((s: any) => s?.type === 'python')
+            )
+              throw new Error(
+                'Python reward scorers run host code; start them from the IDE Evals page',
+              );
             if (
               dataset &&
               excluded(

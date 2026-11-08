@@ -1,0 +1,7 @@
+file '17-speed-results-frame-0.png'
+duration 19.130
+file '17-speed-results-frame-1.png'
+duration 8.670
+file '17-speed-results-frame-2.png'
+duration 6.340
+file '17-speed-results-frame-2.png'

@@ -1,0 +1,7 @@
+file '14-agent-frame-0.png'
+duration 6.970
+file '14-agent-frame-1.png'
+duration 10.190
+file '14-agent-frame-2.png'
+duration 8.273
+file '14-agent-frame-2.png'

@@ -1,0 +1,214 @@
+[
+  {
+    "id": "01-intro",
+    "section": "FINE-TUNING, END TO END",
+    "title": "Teach a small\nmodel a real job.",
+    "benefit": "From an empty folder to a served, evaluated fine-tune on a laptop.",
+    "tag": "QWEN3-0.6B · APPLE SILICON · ALL LOCAL",
+    "card": "task",
+    "lines": [
+      "Here is a common job for a small model: triage support tickets for a company called Lumen, and answer in strict JSON that other tools can rely on.",
+      "Each ticket needs a category, a priority, the product, and whether a human must step in. The priority and escalation rules are Lumen's own policy, so no model knows them out of the box.",
+      "We'll start from an empty folder, measure how a small open model does, build a golden dataset, fine-tune, and prove it got better. All of it in AI Engineering IDE."
+    ]
+  },
+  {
+    "id": "02-project",
+    "section": "01 / START FROM SCRATCH",
+    "title": "An empty folder,\na real project.",
+    "benefit": "Templates come with tracing and a locked Python environment.",
+    "tag": "REAL IDE · EMPTY FOLDER",
+    "lines": [
+      "We open an empty folder and create a project from the PEFT fine-tuning template, called ticket triage.",
+      "The IDE switches into the new project. It already has instrumentation, an evaluation example, and a locked environment definition."
+    ]
+  },
+  {
+    "id": "03-setup",
+    "section": "02 / GET A BASE MODEL",
+    "title": "Pick an open\nmodel.",
+    "benefit": "Public Hub models, pinned to an exact commit.",
+    "tag": "HUGGING FACE · LOCKED ENVIRONMENT",
+    "lines": [
+      "On the Hugging Face page, we install the locked environment: PyTorch, Transformers, and PEFT, isolated to this project.",
+      "Then we download Qwen3 0.6B, a six hundred million parameter open model, about one point two gigabytes. The IDE records the exact commit it downloaded."
+    ]
+  },
+  {
+    "id": "04-data",
+    "section": "03 / BUILD A GOLDEN DATASET",
+    "title": "Write down\nwhat good means.",
+    "benefit": "Labels come from the policy, so every answer is known to be correct.",
+    "tag": "SYNTHETIC · DETERMINISTIC · HELD-OUT EVAL",
+    "lines": [
+      "Next, the data. We added a small generator script to the project. Its docstring is the triage policy.",
+      "P1 for outages, data loss, or a whole team blocked. P2 when one person is blocked or a payment fails. And a human must step in for refunds, cancellations, legal, or security.",
+      "Every example is labeled by that policy, so every answer is known to be correct. That is our golden dataset.",
+      "The eval set is held out: forty tickets with different wording and product names than the training data, so it measures generalization, not memorization.",
+      "We run the generator as a project command: four hundred training tickets and forty eval tickets."
+    ]
+  },
+  {
+    "id": "05-try",
+    "section": "04 / TRY THE BASE MODEL",
+    "title": "Does it work\nout of the box?",
+    "benefit": "Serve any model as an OpenAI-compatible endpoint in one click.",
+    "tag": "BUILT-IN ENGINE · INFERENCE PLAYGROUND",
+    "lines": [
+      "Before training anything, let's see how the base model does. In Serve and evaluate, we serve Qwen with the built-in engine. It comes up as an OpenAI-compatible endpoint, and joins our model connections.",
+      "In the playground, we send a real ticket, with the same instructions the evaluation uses.",
+      "It answers, but wraps the JSON in a code block, and gets the category and the product wrong. The playground also shows latency, token counts, and tokens per second for every reply."
+    ]
+  },
+  {
+    "id": "06-baseline",
+    "section": "05 / MEASURE THE BASELINE",
+    "title": "Measure before\nyou train.",
+    "benefit": "Verifiable scorers turn a hunch into a number.",
+    "tag": "40 HELD-OUT TICKETS · VERIFIABLE REWARDS",
+    "lines": [
+      "One example proves nothing, so we evaluate all forty held-out tickets against the served model.",
+      "We pick two verifiable scorers. JSON match needs every field exactly right. A Python reward function gives a quarter point for each correct field.",
+      "The cases stream in as the model answers them."
+    ]
+  },
+  {
+    "id": "07-baseline-results",
+    "section": "05 / MEASURE THE BASELINE",
+    "title": "A clear\nstarting point.",
+    "benefit": "Every case opens as a trace with each scorer's verdict.",
+    "tag": "RUN TREE · SCORER REASONS",
+    "lines": [
+      "The base model gets {b_exact} percent of tickets fully right, and {b_fields} percent of fields. That is our baseline.",
+      "Every case opens as a trace: the prompt, the model's reply, and each scorer's verdict, with its reason."
+    ]
+  },
+  {
+    "id": "08-train",
+    "section": "06 / FINE-TUNE",
+    "title": "Teach it\nthe policy.",
+    "benefit": "A small LoRA adapter; the base weights stay untouched.",
+    "tag": "LORA · TRANSFORMERS + PEFT · APPLE MPS",
+    "lines": [
+      "Now we fine-tune. The base model, the training set, one hundred fifty steps, batch size four, and LoRA rank sixteen. We train a small adapter, and the base weights stay untouched.",
+      "Chat examples are trained in the model's own chat format, and the loss counts only the answer.",
+      "The loss streams in live while the job runs on Apple Silicon. This run took about {train1_min} minutes."
+    ]
+  },
+  {
+    "id": "09-eval1",
+    "section": "07 / EVALUATE AGAIN",
+    "title": "Same test,\nnew model.",
+    "benefit": "Serve the adapter and rerun the exact same evaluation.",
+    "tag": "SAME 40 TICKETS · SAME SCORERS",
+    "lines": [
+      "We serve the new adapter with the same engine, and run the exact same evaluation on the same forty tickets.",
+      "The adapter loads on top of the base weights in a few seconds, and the cases start streaming in."
+    ]
+  },
+  {
+    "id": "10-eval1-results",
+    "section": "07 / EVALUATE AGAIN",
+    "title": "Better.\nNot done.",
+    "benefit": "Failing traces show what the data is missing.",
+    "tag": "ERROR ANALYSIS",
+    "lines": [
+      "Fully correct tickets go from {b_exact} to {r1_exact} percent, and field accuracy from {b_fields} to {r1_fields} percent. The answers also got shorter.",
+      "But we are not done. Reading the failing cases shows a pattern: urgency and escalation worded in ways the training data never used, like nobody at our company can work right now."
+    ]
+  },
+  {
+    "id": "11-round2",
+    "section": "08 / FIX THE DATA",
+    "title": "Read failures,\nfix the data.",
+    "benefit": "Broaden coverage. Never touch the eval set.",
+    "tag": "ROUND 2 · 600 TRAINING TICKETS",
+    "lines": [
+      "So we fix the data, not the model. Round two of the generator adds new phrasings for urgency, escalation, and product names.",
+      "They are new paraphrases, not copies of eval tickets, and the eval set stays byte for byte the same.",
+      "Six hundred training tickets. We fine-tune again from the base model, this time for two hundred steps."
+    ]
+  },
+  {
+    "id": "12-eval2",
+    "section": "09 / EVALUATE ROUND 2",
+    "title": "Add a\nsecond opinion.",
+    "benefit": "Agent review grades judgment calls with a rubric.",
+    "tag": "VERIFIABLE REWARDS + AGENT REVIEW",
+    "lines": [
+      "We serve the round two adapter and evaluate it the same way.",
+      "This time we also add an agent review scorer, with a rubric. A coding agent will grade each answer as a support lead would."
+    ]
+  },
+  {
+    "id": "13-eval2-results",
+    "section": "09 / EVALUATE ROUND 2",
+    "title": "Progress you\ncan show.",
+    "benefit": "Every experiment side by side.",
+    "tag": "EXPERIMENTS TABLE",
+    "lines": [
+      "Round two: {r2_exact} percent of tickets fully correct, and {r2_fields} percent of fields.",
+      "The Experiments table keeps every run side by side: baseline, round one, and round two, with scores, latency, speed, and tokens."
+    ]
+  },
+  {
+    "id": "14-agent",
+    "section": "10 / LET AN AGENT REVIEW",
+    "title": "A coding agent\nas a grader.",
+    "benefit": "Your coding agent reads cases and submits scores over MCP.",
+    "tag": "MCP · SCOPED CREDENTIAL · CODEX CLI",
+    "lines": [
+      "The agent review is waiting. In External agents, we issue a scoped credential for this workspace.",
+      "Then we start Codex in the IDE terminal, connected to the workspace over MCP, and ask it to grade the evaluation. Claude Code connects the same way.",
+      "It reads every case through MCP, judges it against the rubric, and submits its scores back to the IDE."
+    ]
+  },
+  {
+    "id": "15-agent-results",
+    "section": "10 / LET AN AGENT REVIEW",
+    "title": "Scores with\nreasons.",
+    "benefit": "Agent grades land next to the verifiable scores.",
+    "tag": "REAL CODEX RUN",
+    "lines": [
+      "Codex finished. Its grades land in the same table: an average of {agent_mean}, with a reason on every case.",
+      "Exact scorers catch formatting and field mistakes. The agent catches whether a decision is defensible."
+    ]
+  },
+  {
+    "id": "16-speed",
+    "section": "11 / SERVE IT FAST",
+    "title": "Same model,\nfaster engine.",
+    "benefit": "vLLM, SGLang, or MLX behind the same API.",
+    "tag": "VLLM · MERGED ADAPTER · 8 PARALLEL REQUESTS",
+    "lines": [
+      "Finally, serving. The built-in engine handles one request at a time: {t_tps} tokens per second for the fine-tuned model on this laptop.",
+      "We serve the same fine-tuned model with vLLM. The IDE merges the adapter into full weights once, and starts vLLM's OpenAI-compatible server.",
+      "Then we rerun the evaluation, with eight requests in parallel."
+    ]
+  },
+  {
+    "id": "17-speed-results",
+    "section": "11 / SERVE IT FAST",
+    "title": "Measure the\nspeed, too.",
+    "benefit": "Tokens per second, per request and in total.",
+    "tag": "INFERENCE METRICS",
+    "lines": [
+      "With eight requests in parallel, vLLM delivers {v_total} tokens per second in total, about {speedup} times the built-in engine, while each request still runs at {v_tps}. Median latency drops from {t_p50} to {v_p50} seconds, and quality stays the same.",
+      "The tips panel lists what else helps: batching, fewer output tokens, merged adapters, quantization, or a GPU.",
+      "And the fine-tuned model answers our ticket correctly, in clean JSON."
+    ]
+  },
+  {
+    "id": "18-outro",
+    "section": "RESULTS",
+    "title": "From guess\nto evidence.",
+    "benefit": "Every step is a recorded run you can trace, compare, and hand to an agent.",
+    "tag": "AI ENGINEERING IDE · PREVIEW",
+    "card": "results",
+    "lines": [
+      "From an empty folder: a model that couldn't do the job, a golden dataset, two fine-tuning rounds, and a measured jump from {b_exact} to {r2_exact} percent of tickets fully correct.",
+      "Every step was a recorded run that you can trace, compare, and hand to an agent.",
+      "One caveat: the data is synthetic and the eval set is small. For production, keep a second untouched test set, and evaluate on real tickets."
+    ]
+  }
+]

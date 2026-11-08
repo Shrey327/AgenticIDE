@@ -5,4 +5,5 @@ export type {
   Span,
   EventRecord,
   Connection,
+  TraceNode,
 } from '@aiide/core/lib/types.js';

@@ -1,0 +1,11 @@
+file '04-data-frame-0.png'
+duration 8.010
+file '04-data-frame-1.png'
+duration 13.470
+file '04-data-frame-2.png'
+duration 7.310
+file '04-data-frame-3.png'
+duration 9.070
+file '04-data-frame-4.png'
+duration 7.185
+file '04-data-frame-4.png'

@@ -7,6 +7,7 @@ import { AssistantPanel } from './assistant-panel.js';
 import { TrainingPanel } from './training-panel.js';
 import { LabPanel } from './lab-panel.js';
 import { FinetunePanel } from './finetune-panel.js';
+import { EvalsPanel } from './evals-panel.js';
 import { SettingsPanel } from './settings-panel.js';
 import { AgentAccessPanel } from './agent-access-panel.js';
 import { Call, format, Heading } from './shared.js';
@@ -50,6 +51,12 @@ const nav: NavItem[] = [
     group: 'Train',
   },
   { id: 'Training', label: 'Training jobs', icon: 'pulse', group: 'Train' },
+  {
+    id: 'Evals',
+    label: 'Serve & evaluate',
+    icon: 'beaker',
+    group: 'Train',
+  },
   { id: 'Runs', label: 'Runs', icon: 'history', group: 'Observe' },
   { id: 'Traces', label: 'Traces', icon: 'list-tree', group: 'Observe' },
 ];
@@ -154,6 +161,7 @@ function Workbench({
 }) {
   const [root, setRoot] = React.useState(initialRoot),
     [connected, setConnected] = React.useState(false);
+  const [evalModel, setEvalModel] = React.useState('');
   const [tab, setTab] = React.useState('Overview'),
     [error, setError] = React.useState(''),
     [busy, setBusy] = React.useState(false);
@@ -241,6 +249,10 @@ function Workbench({
   const openRun = (id: string) => {
     setRunId(id);
     setTab('Runs');
+  };
+  const openEvals = (model: string) => {
+    setEvalModel(model);
+    setTab('Evals');
   };
   if (opening && !connected)
     return <div className="aiide aiide-loading">Opening workspace…</div>;
@@ -440,6 +452,18 @@ function Workbench({
               runs={runs}
               select={setRunId}
               refresh={refresh}
+              openRun={openRun}
+              openEvals={openEvals}
+            />
+          )}
+          {tab === 'Evals' && (
+            <EvalsPanel
+              call={call}
+              perform={perform}
+              connections={connections}
+              refresh={refresh}
+              initialModel={evalModel}
+              openTrace={openTrace}
               openRun={openRun}
             />
           )}

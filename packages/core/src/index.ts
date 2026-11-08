@@ -16,3 +16,5 @@ export * from './wandb';
 export * from './agent-access';
 export * from './lab';
 export * from './huggingface';
+export * from './serving';
+export * from './evals';
