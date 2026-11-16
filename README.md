@@ -22,7 +22,7 @@ To open your own project:
 npm start -- /absolute/path/to/project
 ```
 
-The unsigned macOS Apple Silicon installer is built into `dist/0.2.1/AI Engineering IDE-0.2.1-arm64.dmg`. This is a development build, without Apple notarization. Linux packaging is configured in CI but must be validated on a Linux machine before a supported Linux release.
+The current locally built macOS Apple Silicon audit preview is `dist/audit-preview-iteration2-2026-11-16/AI Engineering IDE-0.2.1-arm64.dmg`, with its checksum and packaged-file validation in the adjacent `SHA256SUMS` and `VALIDATION.json`. Earlier installers remain under `dist/audit-preview-2026-11-16/` and `dist/0.2.1/`. This is an unsigned development build, without Apple notarization. Linux packaging is configured in CI but must be validated on a Linux machine before a supported Linux release.
 
 ## Build from a clean checkout
 
@@ -48,7 +48,7 @@ The browser target is for local development. It is not a hosted or multi-user de
 
 ## Create an AI project
 
-1. Open a parent folder and use **Home → Create a project from a template**. Templates include generic Python, LangGraph, LangChain/Qdrant RAG, PyTorch training, scikit-learn, and local PEFT fine-tuning.
+1. Open a parent folder and use **Home → Create a project from a template**. Templates include generic Python, LangGraph, LangChain/Qdrant RAG, PyTorch training, scikit-learn, local PEFT fine-tuning, reinforcement learning, and a LiveKit voice agent.
 2. In **Runs**, select `setup` to install the locked environment. Then select `example`.
 3. For model-dependent templates, configure model connections below and select them in **Settings → Template chat model / Template embedding model / Template vector database**. Save settings before running.
 4. Inspect spans, events, evaluations, and metrics in **Runs** and **Traces**. Enable content capture in Settings if you want persisted prompt, response, log, document, or graph-state content.
@@ -59,9 +59,26 @@ Existing projects retain their lockfiles and environment. Set the Python executa
 
 In **Build → Models & playground**, pick a preset (Ollama, LM Studio, vLLM, llama.cpp, or an HTTPS OpenAI-compatible API) or enter the API base URL, model name, and optional API key. For Ollama's compatible API, use `http://localhost:11434/v1`. Add a separate connection for an embedding model. Other OpenAI-compatible endpoints are supported; remote connections require HTTPS.
 
-Run **Test capabilities**. Chat, streaming, tool calls, and embeddings are tested independently. The **Inference playground** on the same page sends multi-turn prompts with an optional system prompt, temperature, and max tokens, and shows latency, token counts, throughput, and estimated cost. A chat-only model can answer questions and suggest patches. Autonomous execution requires a successful tool-call test and Docker. Model connections are also registered with Theia AI.
+Run **Test capabilities**. Chat, streaming, tool calls, and embeddings are tested independently. The **Inference playground** on the same page sends multi-turn prompts with an optional system prompt, temperature, and max tokens, and shows latency, token counts, throughput, and estimated cost. A chat-only model can answer questions and suggest patches. Autonomous execution requires a successful tool-call test and the runtime selected by the sandbox isolation policy. Model connections are also registered with Theia AI.
 
 Keys live in the OS credential store. The project stores only connection IDs and credential references. No plaintext fallback is used if the keyring is unavailable. Changing an endpoint does not reuse its old credential automatically.
+
+## Project memory, voice agents, and RL environments
+
+- **Build → Knowledge & memory:** import sources, retain portable Markdown, search by terms or meaning, explore a focused link map, inspect original-source freshness, and attach selected context to the assistant. Opt into automatic source scans and budgeted draft refreshes; review conflicts/proposals before applying. Revision history supports restoring edited or deleted notes. See [project memory](docs/knowledge.md) and [semantic retrieval](docs/semantic-retrieval.md).
+- **Build → Voice agents:** create a LiveKit voice project, configure chat/speech connections, start a recorded worker, and join its WebRTC room with an explicitly enabled microphone. VAD, interruption, transcripts and pipeline metrics use the actual framework. Speech can run locally with whisper.cpp or MLX Whisper plus device TTS. The text/dictation playground remains available separately. See [voice workflows](docs/voice.md).
+- **Train → RL environments:** use seeded Q-learning, or install the RL template's `advanced` extra for PPO/SAC, reviewed custom Gymnasium environments, process workers, held-out multi-seed comparisons, checkpoints/resume, and interactive policy rollouts. Approved project Python runs with host privileges; review its sources before registration. No model account or GPU is required. See [RL environments](docs/rl.md).
+- **Build → Import documents:** preview PDF/text extraction or opt into local OCR, inspect page provenance, then save reviewed Markdown for memory or RAG. See [document import](docs/document-import.md).
+- **Build → Sandboxes:** choose Docker or required dedicated Apple VM isolation, install a staged locked environment, execute bounded checks, inspect diffs, and apply reviewed edits. VM mode requires a separately installed Apple Container runtime/kernel on Apple Silicon macOS 26 and fails closed when unavailable. Staged sources survive restart and owned orphan commands are stopped. See [sandboxes and recovery](docs/sandboxes.md).
+- **Train → Serve & evaluate:** snapshot datasets, export reviewed failure cases from runs/traces, and enforce scorer/baseline thresholds with the CI gate CLI. See [regression gates](docs/eval-regressions.md).
+- **Observe → Task evidence:** save a reviewed plan and source checkpoint, link recorded runs/evaluation gates and review findings, then review completion and export a portable JSON handoff. Changed sources or failing evidence block current completion. See [task evidence](docs/task-evidence.md).
+- **Project → Share project:** preview selected files, export an integrity-checked ZIP, and import a reviewed bundle into a new folder without running its code or overwriting existing work. See [project sharing](docs/sharing.md).
+
+RAG supports semantic/BM25/hybrid retrieval and optional validated reranking, excludes stale managed context, reconciles source generations, and removes only explicitly selected owned sources. Random workspace namespaces protect independently shared copies; legacy points remain read-only. See [semantic retrieval](docs/semantic-retrieval.md) and [RAG source lifecycle](docs/rag-lifecycle.md). Global workspace search finds panels, runs, models and memory notes.
+
+Checkpoint loading requires Torch 2.10.0 or newer: an upstream advisory affects older `weights_only` loaders. Current template locks and the SDK enforce the minimum; existing project environments and copied SDKs require an explicit upgrade. [PyTorch advisory](https://github.com/pytorch/pytorch/security/advisories/GHSA-63cw-57p8-fm3p).
+
+The [dated product audit](docs/product-audit-2026-11-15.md) maps the product against gstack, OpenWiki, Karpathy's LLM Wiki, voice platforms, evaluation tools and RL frameworks, and explicitly lists remaining work.
 
 ## RAG workflow
 
@@ -164,6 +181,24 @@ npm run typecheck
 npm test
 npm run check:format
 npm run test:usability            # component/keyboard tests in Chrome
+npm run test:voice:ui             # speech API fixtures and text fallback in Chrome
+npm run test:product:ui           # after build:browser; persistent local product workflows
+npm run test:memory:ui            # automatic scan/draft/review/history
+npm run test:knowledge:graph:ui   # keyboard link map and delayed-response draft protection
+npm run test:eval:ui              # versioned datasets and regression gates
+npm run test:evidence:ui          # plan → actual test/eval gates → reviewed JSON handoff
+npm run test:documents:ui         # PDF/OCR → reviewed Markdown → RAG
+npm run test:rag:lifecycle        # actual Qdrant replacement, retry and removal
+npm run test:rag:semantic         # installed model2vec + verified local weights + Qdrant
+npm run test:custom:rl            # installed advanced RL runtime; real PPO/SAC factories
+npm run test:custom:rl:ui         # reviewed factory → Gym checker → actual training
+npm run test:sandboxes            # actual Docker isolation, limits and recovery
+npm run test:sandboxes:vm         # Apple Silicon macOS 26; installed runtime/kernel
+npm run test:sandboxes:vm:ui      # actual VM policy, environment install and diff application
+npm run test:sandboxes:vm:env     # actual VM dependency-build cancellation and retry
+npm run test:voice:reliability    # actual local RTC/ASR/TTS with provider/network faults
+npm run test:local:jobs           # process trees, checkpoints and IDE crash cleanup
+npm run test:desktop              # after build; isolated native Electron acceptance
 npm run test:workflows:agents      # real MCP template → setup → SVM workflow
 npm run test:workflows:ui          # after build:browser; real no-code browser flow
 npm run test:huggingface           # opt-in: ~1.2 GB Qwen download + one LoRA step
@@ -186,3 +221,5 @@ AIIDE_ELECTRON_URL=http://127.0.0.1:9223 npm run test:ui
 Debugging ports are for local testing only. `scripts/test-runtime.mjs` additionally exercises real Docker and Qdrant using deterministic model protocol fixtures; it requires Docker and cached images or network access for the first pull. No real model benchmark is implied by fixture tests.
 
 Training-specific acceptance: `npm run test:training`, `npm run test:wandb`, and `npm run test:training:ui`. These exercise actual CPU training and a real local SSH server, with W&B API fixtures. See the training guide for prerequisites.
+
+Advanced CPU RL, semantic retrieval and full local speech/WebRTC acceptance use optional installed runtimes and explicit environment variables: see [RL](docs/rl.md), [semantic retrieval](docs/semantic-retrieval.md) and [voice](docs/voice.md). The [audit follow-through](docs/audit-followthrough.md) maps implemented work to evidence and remaining release gates.

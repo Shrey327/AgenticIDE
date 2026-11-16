@@ -14,6 +14,7 @@ const { outputFiles } = await build({
       import { TrainingPanel } from './packages/theia-extension/src/browser/training-panel.tsx';
       import { AssistantPanel } from './packages/theia-extension/src/browser/assistant-panel.tsx';
       import { RunsPanel } from './packages/theia-extension/src/browser/runs-panel.tsx';
+      import { useProjectDraft } from './packages/theia-extension/src/browser/use-project-draft.ts';
       const root = createRoot(document.getElementById('root'));
       const project = {
         config: { commands: {}, environment: { python: 'python3' } },
@@ -21,6 +22,8 @@ const { outputFiles } = await build({
       };
       const perform = async (fn) => { try { await fn(); } catch(e) { window.failure = String(e); } };
       const call = async (method, args) => {
+        if (method === 'drafts.get') return null;
+        if (method === 'drafts.save') { (window.draftSaves ||= []).push(args); return args.data; }
         if (method === 'assistant.start') { window.request = args; return { status: 'completed', text: 'done' }; }
         if (method === 'training.start') { window.trainingCalls = (window.trainingCalls || 0) + 1; return new Promise(resolve => { window.trainingComplete = resolve; }); }
         if (method === 'ssh.list') return [];
@@ -30,7 +33,12 @@ const { outputFiles } = await build({
         return {};
       };
       const common = { call, perform, refresh: async () => {}, connections: [] };
+      function DraftProbe() {
+        const [draft, update] = useProjectDraft(call, 'probe', {text:''});
+        return <input aria-label="Draft probe" value={draft.text} onChange={event=>update(old=>({...old,text:event.target.value}))} />;
+      }
       window.show = (page) => {
+        if (page === 'draft') root.render(<DraftProbe />);
         if (page === 'training') root.render(<TrainingPanel {...common} project={{...project, config: {...project.config, commands: {train: ['python', 'train.py']}}}} runs={[]} selected="" select={() => {}} />);
         if (page === 'assistant') root.render(<AssistantPanel {...common} context="" setContext={() => {}} selection={() => ''} connections={[
           { id: 'tools', kind: 'model', capabilities: { tools: true } }, { id: 'basic', kind: 'model' }
@@ -38,7 +46,10 @@ const { outputFiles } = await build({
         if (page === 'models') root.render(<ModelsPanel {...common} connections={[
           { id: 'local', kind: 'model', url: 'http://localhost:11434/v1', model: 'qwen' }
         ]} />);
-        if (page === 'overview') root.render(<Overview {...common} project={project} runs={[]}
+        if (page === 'overview') root.render(<Overview {...common} project={project} runs={[
+          {id: 'failed-ingest', name: 'rag.ingest', status: 'failed', started: 1},
+          {id: 'failed-query', name: 'rag.query', status: 'failed', started: 1}
+        ]}
           status={{}} created={async () => {}} go={() => {}} openRun={() => {}} openTrace={() => {}} />);
         if (page === 'chart') root.render(<MetricChart values={[{ name: 'loss', value: null, timestamp: 0 }]}
           compare={[{ name: 'loss', value: 3, timestamp: 1 }, { name: 'loss', value: 2, timestamp: 2 }]} />);
@@ -71,6 +82,23 @@ try {
   await page.setContent('<main class="aiide" id="root"></main>');
   await page.addScriptTag({ content: outputFiles[0].text });
 
+  await page.evaluate(() => window.show('draft'));
+  await page.waitForSelector('[aria-label="Draft probe"]');
+  await page.type('[aria-label="Draft probe"]', 'draft');
+  assert.equal(await page.evaluate(() => window.draftSaves?.length || 0), 0);
+  await page.waitForFunction(() => window.draftSaves?.length === 1);
+  assert.equal(
+    await page.evaluate(() => window.draftSaves[0].data.text),
+    'draft',
+  );
+  await page.type('[aria-label="Draft probe"]', '!');
+  await page.evaluate(() => window.show('chart'));
+  await page.waitForFunction(() => window.draftSaves?.length === 2);
+  assert.equal(
+    await page.evaluate(() => window.draftSaves[1].data.text),
+    'draft!',
+  );
+
   await page.evaluate(() => window.show('chart'));
   await page.waitForSelector('svg[role="img"]');
   const chart = await page.$eval('svg', (node) =>
@@ -82,6 +110,8 @@ try {
 
   await page.evaluate(() => window.show('overview'));
   await page.waitForSelector('[aria-label="Project template"]');
+  assert.ok(await page.$('[aria-label="Ingest a document: not complete"]'));
+  assert.ok(await page.$('[aria-label="Query and evaluate: not complete"]'));
   const firstTemplate = '[aria-label="Project template"] button:first-child';
   await page.focus(firstTemplate);
   await page.keyboard.press('Space');
@@ -180,7 +210,7 @@ try {
   assert.equal(await page.evaluate(() => window.failure), undefined);
   assert.deepEqual(errors, []);
   console.log(
-    'PASS: comparison-only chart, keyboard template selection, pending inference, labeled controls, empty run filters, assistant capability guard, training validation and duplicate launch guard',
+    'PASS: debounced drafts and navigation flush, comparison-only chart, keyboard template selection, pending inference, labeled controls, empty run filters, assistant capability guard, training validation and duplicate launch guard',
   );
 } finally {
   await browser.close();

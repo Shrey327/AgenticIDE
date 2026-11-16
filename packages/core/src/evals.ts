@@ -6,7 +6,7 @@ import { Connections } from './models';
 import { Store } from './store';
 import { HuggingFace } from './huggingface';
 import { loadProject } from './project';
-import { within } from './security';
+import { within, hash, excluded } from './security';
 import { Run, TraceNode } from './types';
 
 const defaultRubric =
@@ -112,6 +112,149 @@ export interface EvalFile {
   total: number;
   cases: EvalCase[];
   summary: ReturnType<typeof summarize>;
+  datasetVersion?: { hash: string; file: string; cases: number };
+  configVersion?: string;
+  rewardVersions?: Record<string, string>;
+}
+
+const gateSchema = z
+  .object({
+    thresholds: z
+      .record(z.number().min(0).max(1))
+      .refine(
+        (value) =>
+          Object.keys(value).length > 0 &&
+          Object.keys(value).length <= 32 &&
+          Object.keys(value).every(
+            (name) =>
+              /^[a-zA-Z0-9_.-]{1,80}$/.test(name) &&
+              !['__proto__', 'constructor', 'prototype'].includes(name),
+          ),
+        'Choose 1–32 valid scorer thresholds',
+      ),
+    maxErrors: z.number().int().min(0).max(1000).default(0),
+    maxRegression: z.number().min(0).max(1).default(0),
+  })
+  .strict();
+
+/** Recompute scores instead of trusting cached summaries; incomplete/pending results fail closed. */
+export function evaluationGate(
+  data: EvalFile,
+  input: unknown,
+  baseline?: EvalFile,
+) {
+  const options = gateSchema.parse(input);
+  const reasons: string[] = [];
+  if (data.status !== 'completed')
+    reasons.push(`Evaluation status is ${data.status}, expected completed`);
+  if (
+    !Array.isArray(data.cases) ||
+    !Number.isInteger(data.total) ||
+    data.total < 1 ||
+    data.total > 1000 ||
+    data.cases.length !== data.total ||
+    new Set(data.cases.map((item) => item.index)).size !== data.total ||
+    data.cases.some(
+      (item) =>
+        !Number.isInteger(item.index) ||
+        item.index < 0 ||
+        item.index >= data.total,
+    )
+  )
+    reasons.push('Evaluation cases are incomplete or duplicated');
+  const summary = summarize(data.cases, Object.keys(options.thresholds));
+  if (summary.errors > options.maxErrors)
+    reasons.push(`${summary.errors} case errors exceed ${options.maxErrors}`);
+  if (baseline) {
+    if (
+      baseline.status !== 'completed' ||
+      !baseline.cases?.length ||
+      baseline.cases.length !== baseline.total ||
+      new Set(baseline.cases.map((item) => item.index)).size !==
+        baseline.total ||
+      baseline.cases.some(
+        (item) => item.index < 0 || item.index >= baseline.total,
+      )
+    )
+      reasons.push('Baseline is incomplete');
+    if (
+      !data.datasetVersion ||
+      !baseline.datasetVersion ||
+      data.datasetVersion.hash !== baseline.datasetVersion.hash
+    )
+      reasons.push(
+        'Baseline and candidate must use the same immutable dataset version',
+      );
+    if (canonical(data.config.scorers) !== canonical(baseline.config.scorers))
+      reasons.push('Baseline and candidate scorer configurations differ');
+  }
+  const scores: Record<
+    string,
+    { mean: number | null; minimum: number; baseline?: number | null }
+  > = {};
+  for (const [name, minimum] of Object.entries(options.thresholds)) {
+    const score = summary.scorers[name];
+    const values = data.cases.map((item) => item.scores[name]);
+    if (
+      !data.scorers.some((scorer) => scorer.name === name) ||
+      !score.count ||
+      score.pending ||
+      values.some(
+        (value) =>
+          !value ||
+          (!value.skipped &&
+            (typeof value.score !== 'number' ||
+              !Number.isFinite(value.score) ||
+              value.score < 0 ||
+              value.score > 1)),
+      )
+    )
+      reasons.push(`${name} has missing, pending or invalid scores`);
+    if (score.mean === null || score.mean < minimum)
+      reasons.push(
+        `${name} mean ${score.mean ?? 'missing'} is below ${minimum}`,
+      );
+    const previous = baseline
+      ? summarize(baseline.cases, [name]).scorers[name]
+      : undefined;
+    if (
+      previous &&
+      (previous.mean === null ||
+        !Number.isFinite(previous.mean) ||
+        previous.pending ||
+        !previous.count ||
+        baseline!.cases.some(
+          (item) =>
+            !item.scores[name] ||
+            (!item.scores[name].skipped &&
+              (typeof item.scores[name].score !== 'number' ||
+                !Number.isFinite(item.scores[name].score) ||
+                item.scores[name].score! < 0 ||
+                item.scores[name].score! > 1)),
+        ))
+    )
+      reasons.push(`${name} baseline scores are incomplete`);
+    if (
+      score.mean !== null &&
+      previous?.mean != null &&
+      score.mean + options.maxRegression < previous.mean
+    )
+      reasons.push(`${name} regressed from ${previous.mean} to ${score.mean}`);
+    scores[name] = {
+      mean: score.mean,
+      minimum,
+      ...(previous && { baseline: previous.mean }),
+    };
+  }
+  return {
+    passed: reasons.length === 0,
+    runId: data.runId,
+    datasetVersion: data.datasetVersion?.hash,
+    configVersion: data.configVersion,
+    scores,
+    errors: summary.errors,
+    reasons,
+  };
 }
 
 const hex = (bytes: number) => crypto.randomBytes(bytes).toString('hex');
@@ -253,7 +396,14 @@ export function summarize(cases: EvalCase[], names: string[]) {
   for (const name of names) {
     const values = cases
       .map((c) => c.scores[name])
-      .filter((s) => s && typeof s.score === 'number' && !s.pending)
+      .filter(
+        (s) =>
+          s &&
+          typeof s.score === 'number' &&
+          Number.isFinite(s.score) &&
+          !s.pending &&
+          !s.skipped,
+      )
       .map((s) => s.score!);
     scorers[name] = {
       mean: values.length
@@ -298,6 +448,8 @@ export function summarize(cases: EvalCase[], names: string[]) {
 /** Batch evaluation of any OpenAI-compatible model connection, with LangSmith-style traces per case. */
 export class Evals {
   private active = new Map<string, AbortController>();
+  private pending = new Map<string, Promise<void>>();
+  private closed = false;
   constructor(
     readonly root: string,
     readonly store: Store,
@@ -311,6 +463,8 @@ export class Evals {
   private read(runId: string): EvalFile {
     const file = this.file(runId);
     if (!fs.existsSync(file)) throw new Error('Evaluation not found');
+    if (!fs.statSync(file).isFile())
+      throw new Error('Evaluation results must be regular files');
     return JSON.parse(fs.readFileSync(file, 'utf8'));
   }
   private write(data: EvalFile) {
@@ -440,8 +594,207 @@ def score(output, expected, case, tool_calls):
       offset: start,
     };
   }
+  private snapshotCases(cases: Case[]) {
+    const content = cases.map((item) => canonical(item)).join('\n') + '\n';
+    if (Buffer.byteLength(content) > 10 * 1024 * 1024)
+      throw new Error('Dataset snapshot exceeds 10 MB');
+    const digest = hash(content);
+    const relative = `.aiide/eval-datasets/${digest}.jsonl`;
+    const file = within(this.root, relative, true);
+    fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+    if (!fs.existsSync(file)) {
+      const versions = fs
+        .readdirSync(path.dirname(file))
+        .filter((name) => /^[a-f0-9]{64}\.jsonl$/.test(name));
+      const bytes = versions.reduce(
+        (total, name) =>
+          total +
+          fs.statSync(within(this.root, `.aiide/eval-datasets/${name}`)).size,
+        0,
+      );
+      if (
+        versions.length >= 300 ||
+        bytes + Buffer.byteLength(content) > 100 * 1024 * 1024
+      )
+        throw new Error(
+          'Dataset archive limit reached (300 versions or 100 MB); remove obsolete snapshots',
+        );
+      fs.writeFileSync(file, content, { flag: 'wx', mode: 0o600 });
+    } else if (
+      !fs.statSync(file).isFile() ||
+      fs.statSync(file).size > 10 * 1024 * 1024 ||
+      hash(fs.readFileSync(file)) !== digest
+    )
+      throw new Error('Dataset snapshot checksum mismatch');
+    return { hash: digest, file: relative, cases: cases.length };
+  }
+  snapshot(dataset: string) {
+    return this.snapshotCases(this.load(dataset));
+  }
+  datasets() {
+    const directory = within(this.root, '.aiide/eval-datasets', true);
+    if (!fs.existsSync(directory)) return [];
+    const files = fs
+      .readdirSync(directory)
+      .filter((name) => /^[a-f0-9]{64}\.jsonl$/.test(name));
+    if (files.length > 300)
+      throw new Error(
+        'Dataset archive exceeds 300 versions; remove obsolete snapshots',
+      );
+    return files.map((name) => {
+      const relative = `.aiide/eval-datasets/${name}`;
+      const file = within(this.root, relative);
+      const stat = fs.statSync(file);
+      if (!stat.isFile() || stat.size > 10 * 1024 * 1024)
+        throw new Error('Invalid dataset snapshot');
+      const content = fs.readFileSync(file);
+      if (hash(content) !== name.slice(0, -6))
+        throw new Error('Dataset snapshot checksum mismatch');
+      return {
+        hash: name.slice(0, -6),
+        file: relative,
+        bytes: stat.size,
+        cases: this.load(relative).length,
+      };
+    });
+  }
+  private exportDataset(file: string, entry: unknown) {
+    if (typeof file !== 'string' || !/\.jsonl$/i.test(file) || excluded(file))
+      throw new Error('Choose a new non-secret workspace .jsonl path');
+    const item = caseSchema.parse(entry);
+    const content = JSON.stringify(item) + '\n';
+    if (Buffer.byteLength(content) > 1024 * 1024)
+      throw new Error('Exported case exceeds 1 MB');
+    const target = within(this.root, file, true);
+    if (fs.existsSync(target))
+      throw new Error('Export destination already exists; choose a new file');
+    const version = this.snapshotCases([item]);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, content, { flag: 'wx', mode: 0o600 });
+    return { file, cases: 1, version };
+  }
+  exportCase(input: unknown) {
+    const args = z
+      .object({
+        runId: z.string(),
+        index: z.number().int().min(0).max(999),
+        file: z.string(),
+        expected: z.string().max(100000),
+        referenceKind: z.enum(['text', 'tool']).default('text'),
+        reviewed: z.literal(true),
+      })
+      .strict()
+      .parse(input);
+    const data = this.read(args.runId);
+    const item = data.cases.find((item) => item.index === args.index);
+    if (!item) throw new Error('Evaluation case not found');
+    const trace = item.trace.find((node) => node.kind === 'llm');
+    const messages = trace?.input ?? item.input;
+    if (
+      messages === undefined ||
+      /\[(?:CONTENT DISABLED|REDACTED)\]/.test(JSON.stringify(messages))
+    )
+      throw new Error(
+        'Case input content was not captured; it cannot be recovered',
+      );
+    let tools: Record<string, unknown>[] | undefined;
+    if (data.datasetVersion) {
+      const file = within(this.root, data.datasetVersion.file);
+      if (
+        !fs.statSync(file).isFile() ||
+        fs.statSync(file).size > 10 * 1024 * 1024 ||
+        hash(fs.readFileSync(file)) !== data.datasetVersion.hash
+      )
+        throw new Error('Dataset snapshot checksum mismatch');
+      tools = this.load(data.datasetVersion.file)[args.index]?.tools;
+    }
+    const reference =
+      args.referenceKind === 'tool'
+        ? {
+            expected_tool: z
+              .union([
+                z.string().min(1),
+                z.object({
+                  name: z.string().min(1),
+                  arguments: z.record(z.unknown()).optional(),
+                }),
+              ])
+              .parse(
+                args.expected.trim().startsWith('{')
+                  ? JSON.parse(args.expected)
+                  : args.expected,
+              ),
+          }
+        : { expected: args.expected };
+    return this.exportDataset(args.file, {
+      ...(Array.isArray(messages) ? { messages } : { input: messages }),
+      ...reference,
+      ...(tools && { tools }),
+      metadata: {
+        sourceRun: args.runId,
+        sourceCase: args.index,
+        reviewedReference: true,
+      },
+    });
+  }
+  exportTrace(input: unknown) {
+    const args = z
+      .object({
+        runId: z.string(),
+        spanId: z.string().max(100),
+        offset: z.number().int().min(0).max(1000000).default(0),
+        file: z.string(),
+        expected: z.string().max(100000),
+        reviewed: z.literal(true),
+      })
+      .strict()
+      .parse(input);
+    const span = this.store
+      .spans(args.runId, args.offset, 500)
+      .items.find((span) => span.spanId === args.spanId);
+    if (!span) throw new Error('Trace span not found on this page');
+    const source = span.attributes.input ?? span.attributes['gen_ai.prompt'];
+    if (
+      source === undefined ||
+      /\[(?:CONTENT DISABLED|REDACTED)\]/.test(JSON.stringify(source))
+    )
+      throw new Error(
+        'Trace input content was not captured; it cannot be recovered',
+      );
+    return this.exportDataset(args.file, {
+      ...(Array.isArray(source) ? { messages: source } : { input: source }),
+      expected: args.expected,
+      metadata: {
+        sourceRun: args.runId,
+        sourceSpan: args.spanId,
+        reviewedReference: true,
+      },
+    });
+  }
+  gate(input: unknown) {
+    const args = z
+      .object({
+        runId: z.string(),
+        thresholds: gateSchema.shape.thresholds,
+        maxErrors: gateSchema.shape.maxErrors,
+        maxRegression: gateSchema.shape.maxRegression,
+        baseline: z.string().optional(),
+      })
+      .strict()
+      .parse(input);
+    const { runId, baseline, ...options } = args;
+    const data = this.read(runId);
+    data.status = this.store.run(runId)?.status ?? data.status;
+    return evaluationGate(
+      data,
+      options,
+      baseline ? this.read(baseline) : undefined,
+    );
+  }
   private load(dataset: string): Case[] {
     const file = within(this.root, dataset);
+    if (!fs.statSync(file).isFile())
+      throw new Error('Choose a regular JSONL dataset file');
     if (!/\.jsonl$/i.test(file) || fs.statSync(file).size > 10 * 1024 * 1024)
       throw new Error('Choose a JSONL dataset up to 10 MB in this workspace');
     const cases = fs
@@ -468,6 +821,7 @@ def score(output, expected, case, tool_calls):
     return cases;
   }
   async run(input: unknown) {
+    if (this.closed) throw new Error('Evaluations are closed');
     const config = configSchema.parse(input);
     const target = this.connections.get(config.target);
     if (target.kind !== 'model' || !target.model)
@@ -486,6 +840,16 @@ def score(output, expected, case, tool_calls):
       }
     }
     const cases = this.load(config.dataset);
+    const datasetVersion = this.snapshotCases(cases);
+    const rewardVersions: Record<string, string> = {};
+    for (const scorer of config.scorers)
+      if (scorer.type === 'python') {
+        const file = within(this.root, scorer.file);
+        if (fs.statSync(file).size > 2 * 1024 * 1024)
+          throw new Error('Python reward files must be below 2 MB');
+        rewardVersions[scorer.file] = hash(fs.readFileSync(file));
+      }
+    const configVersion = hash(canonical({ config, rewards: rewardVersions }));
     const names = scorerNames(config.scorers);
     const label = config.name || path.basename(config.dataset, '.jsonl');
     const run: Run = {
@@ -503,6 +867,8 @@ def score(output, expected, case, tool_calls):
           target: target.id,
           model: target.model,
           scorers: names,
+          datasetVersion: datasetVersion.hash,
+          configVersion,
         },
       },
     };
@@ -513,6 +879,9 @@ def score(output, expected, case, tool_calls):
       dataset: config.dataset,
       target: { connection: target.id, model: target.model, url: target.url },
       config,
+      datasetVersion,
+      configVersion,
+      rewardVersions,
       scorers: config.scorers.map((s, i) => ({
         name: names[i],
         type: s.type,
@@ -527,7 +896,7 @@ def score(output, expected, case, tool_calls):
     this.write(data);
     const controller = new AbortController();
     this.active.set(run.id, controller);
-    void this.execute(run, data, cases, controller.signal)
+    const operation = this.execute(run, data, cases, controller.signal)
       .catch((error) => {
         this.store.event({
           runId: run.id,
@@ -555,15 +924,40 @@ def score(output, expected, case, tool_calls):
               value: value.mean,
             });
       })
-      .finally(() => this.active.delete(run.id));
+      .finally(() => {
+        this.active.delete(run.id);
+        this.pending.delete(run.id);
+      });
+    this.pending.set(run.id, operation);
+    // Keep background write failures observable to shutdown without an unhandled rejection.
+    void operation.catch(() => {});
     return run;
   }
   cancel(id: string) {
     const controller = this.active.get(id),
       run = this.store.run(id);
     if (!controller || !run) throw new Error('Evaluation is not active');
-    this.store.saveRun({ ...run, status: 'cancelled', ended: Date.now() });
     controller.abort();
+    this.store.saveRun({ ...run, status: 'cancelled', ended: Date.now() });
+  }
+  async close() {
+    this.closed = true;
+    const errors: unknown[] = [];
+    for (const id of this.active.keys()) {
+      try {
+        this.cancel(id);
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    const results = await Promise.allSettled([...this.pending.values()]);
+    errors.push(
+      ...results.flatMap((result) =>
+        result.status === 'rejected' ? [result.reason] : [],
+      ),
+    );
+    if (errors.length)
+      throw new AggregateError(errors, 'Evaluation cleanup failed');
   }
   private async execute(
     run: Run,
@@ -587,12 +981,17 @@ def score(output, expected, case, tool_calls):
         this.write(data);
       }
     };
-    await Promise.all(
+    const workers = await Promise.allSettled(
       Array.from(
         { length: Math.min(data.config.concurrency, cases.length) },
         worker,
       ),
     );
+    const failures = workers.flatMap((worker) =>
+      worker.status === 'rejected' ? [worker.reason] : [],
+    );
+    if (failures.length)
+      throw new AggregateError(failures, 'Evaluation workers failed');
     if (signal.aborted) return 'cancelled' as const;
     for (const [i, scorer] of data.config.scorers.entries())
       if (scorer.type === 'python')
@@ -602,10 +1001,13 @@ def score(output, expected, case, tool_calls):
           cases,
           scorer.file,
           data.scorers[i].name,
+          signal,
         );
-    return data.cases.every((c) => c.error)
-      ? ('failed' as const)
-      : ('completed' as const);
+    return signal.aborted
+      ? ('cancelled' as const)
+      : data.cases.every((c) => c.error)
+        ? ('failed' as const)
+        : ('completed' as const);
   }
   private async complete(
     connectionId: string,
@@ -875,10 +1277,21 @@ def score(output, expected, case, tool_calls):
     cases: Case[],
     file: string,
     name: string,
+    signal: AbortSignal,
   ) {
     let results: { score: number; reason?: string; error?: boolean }[];
     const scored = data.cases.filter((c) => c.output);
     try {
+      const reward = within(this.root, file);
+      if (
+        !fs.statSync(reward).isFile() ||
+        fs.statSync(reward).size > 2 * 1024 * 1024 ||
+        (data.rewardVersions?.[file] &&
+          hash(fs.readFileSync(reward)) !== data.rewardVersions[file])
+      )
+        throw new Error(
+          'Python reward file changed after this evaluation started',
+        );
       results = await this.huggingface.python(
         'aiide_eval',
         [],
@@ -892,6 +1305,7 @@ def score(output, expected, case, tool_calls):
           })),
         },
         180000,
+        signal,
       );
     } catch (error) {
       results = scored.map(() => ({

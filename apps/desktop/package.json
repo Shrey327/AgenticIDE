@@ -82,6 +82,9 @@
         "dmg"
       ],
       "category": "public.app-category.developer-tools",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Use your microphone for voice-agent sessions that you start."
+      },
       "identity": null
     },
     "linux": {

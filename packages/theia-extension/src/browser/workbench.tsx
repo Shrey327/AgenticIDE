@@ -10,6 +10,14 @@ import { FinetunePanel } from './finetune-panel.js';
 import { EvalsPanel } from './evals-panel.js';
 import { SettingsPanel } from './settings-panel.js';
 import { AgentAccessPanel } from './agent-access-panel.js';
+import { KnowledgePanel } from './knowledge-panel.js';
+import { VoicePanel } from './voice-panel.js';
+import { RLPanel } from './rl-panel.js';
+import { SandboxPanel } from './sandbox-panel.js';
+import { WorkspaceSearch } from './workspace-search.js';
+import { ProjectBundlesPanel } from './project-bundles-panel.js';
+import { DocumentsPanel } from './documents-panel.js';
+import { TaskEvidencePanel } from './task-evidence-panel.js';
 import { Call, format, Heading } from './shared.js';
 import { CommandService } from '@theia/core/lib/common';
 import { WorkspaceCommands } from '@theia/workspace/lib/browser/workspace-commands';
@@ -29,6 +37,7 @@ import { EngineeringService, Run, Connection } from '../common/protocol.js';
 type NavItem = { id: string; label: string; icon: string; group?: string };
 const nav: NavItem[] = [
   { id: 'Overview', label: 'Home', icon: 'home' },
+  { id: 'Share', label: 'Share project', icon: 'export', group: 'Project' },
   {
     id: 'Models',
     label: 'Models & playground',
@@ -37,12 +46,26 @@ const nav: NavItem[] = [
   },
   { id: 'RAG', label: 'RAG pipelines', icon: 'database', group: 'Build' },
   {
+    id: 'Documents',
+    label: 'Import documents',
+    icon: 'file-text',
+    group: 'Build',
+  },
+  {
+    id: 'Knowledge',
+    label: 'Knowledge & memory',
+    icon: 'book',
+    group: 'Build',
+  },
+  { id: 'Voice', label: 'Voice agents', icon: 'mic', group: 'Build' },
+  {
     id: 'Assistant',
     label: 'Coding assistant',
     icon: 'sparkle',
     group: 'Build',
   },
   { id: 'Agents', label: 'External agents', icon: 'plug', group: 'Build' },
+  { id: 'Sandboxes', label: 'Sandboxes', icon: 'package', group: 'Build' },
   { id: 'Lab', label: 'Experiment lab', icon: 'graph-scatter', group: 'Train' },
   {
     id: 'Finetune',
@@ -52,12 +75,24 @@ const nav: NavItem[] = [
   },
   { id: 'Training', label: 'Training jobs', icon: 'pulse', group: 'Train' },
   {
+    id: 'RL',
+    label: 'RL environments',
+    icon: 'debug-step-over',
+    group: 'Train',
+  },
+  {
     id: 'Evals',
     label: 'Serve & evaluate',
     icon: 'beaker',
     group: 'Train',
   },
   { id: 'Runs', label: 'Runs', icon: 'history', group: 'Observe' },
+  {
+    id: 'Evidence',
+    label: 'Task evidence',
+    icon: 'checklist',
+    group: 'Observe',
+  },
   { id: 'Traces', label: 'Traces', icon: 'list-tree', group: 'Observe' },
 ];
 
@@ -171,6 +206,18 @@ function Workbench({
   const [connections, setConnections] = React.useState<Connection[]>([]),
     [runId, setRunId] = React.useState('');
   const [context, setContext] = React.useState('');
+  const [memoryDirty, setMemoryDirty] = React.useState(false);
+  const [memoryId, setMemoryId] = React.useState('');
+  const navigate = (next: string) => {
+    if (
+      next !== tab &&
+      memoryDirty &&
+      !window.confirm('Discard unsaved project memory edits?')
+    )
+      return false;
+    setTab(next);
+    return true;
+  };
   const call: Call = React.useCallback(
     async (operation, args) =>
       service.request({ workspace: root, operation, args }),
@@ -276,7 +323,7 @@ function Workbench({
       title={n.label}
       aria-label={n.label}
       aria-current={tab === n.id ? 'page' : undefined}
-      onClick={() => setTab(n.id)}
+      onClick={() => navigate(n.id)}
     >
       <i aria-hidden="true" className={`codicon codicon-${n.icon}`} />
       <span className="aiide-nav-label">{n.label}</span>
@@ -336,6 +383,24 @@ function Workbench({
         </div>
       </aside>
       <div className="aiide-content" ref={content}>
+        <WorkspaceSearch
+          call={call}
+          panels={nav}
+          open={(result) => {
+            if (result.kind === 'panel') navigate(result.id);
+            else if (result.kind === 'memory') {
+              if (
+                tab === 'Knowledge' &&
+                memoryDirty &&
+                !window.confirm('Discard unsaved project memory edits?')
+              )
+                return;
+              if (navigate('Knowledge')) setMemoryId(result.id);
+            } else if (result.kind === 'run') {
+              if (navigate('Runs')) setRunId(result.id);
+            } else navigate('Models');
+          }}
+        />
         {error && <ErrorBanner error={error} clear={() => setError('')} />}
         <main
           className="aiide-main"
@@ -351,7 +416,7 @@ function Workbench({
               connections={connections}
               call={call}
               perform={perform}
-              go={setTab}
+              go={navigate}
               openRun={openRun}
               openTrace={openTrace}
               created={async (next: string) => {
@@ -388,6 +453,9 @@ function Workbench({
               attach={attach}
             />
           )}
+          {tab === 'Evidence' && (
+            <TaskEvidencePanel runs={runs} call={call} perform={perform} />
+          )}
           {tab === 'Models' && (
             <ModelsPanel
               connections={connections}
@@ -415,6 +483,28 @@ function Workbench({
               selection={selection}
             />
           )}
+          {tab === 'Knowledge' && (
+            <KnowledgePanel
+              call={call}
+              perform={perform}
+              connections={connections}
+              attach={attach}
+              onDirtyChange={setMemoryDirty}
+              initialId={memoryId}
+            />
+          )}
+          {tab === 'Voice' && (
+            <VoicePanel call={call} connections={connections} />
+          )}
+          {tab === 'RL' && (
+            <RLPanel
+              runs={runs}
+              call={call}
+              perform={perform}
+              refresh={refresh}
+              openTrace={openTrace}
+            />
+          )}
           {tab === 'Agents' && (
             <>
               <Heading
@@ -423,6 +513,26 @@ function Workbench({
               />
               <AgentAccessPanel call={call} perform={perform} />
             </>
+          )}
+          {tab === 'Sandboxes' && (
+            <SandboxPanel call={call} perform={perform} />
+          )}
+          {tab === 'Documents' && (
+            <DocumentsPanel call={call} perform={perform} />
+          )}
+          {tab === 'Share' && (
+            <ProjectBundlesPanel
+              call={call}
+              perform={perform}
+              openProject={async (next) => {
+                await openProject(next);
+                setRoot(next);
+                setConnected(false);
+                setProject(undefined);
+                setRuns([]);
+                setRunId('');
+              }}
+            />
           )}
           {tab === 'Lab' && (
             <LabPanel
@@ -536,8 +646,9 @@ function Welcome({
       </span>
       <h2>Train, build, and debug AI systems in one place.</h2>
       <p>
-        Runs, traces, models, RAG, and training live next to your code. Data
-        stays on this device in a private <code>.aiide</code> folder.
+        Runs, traces, models, knowledge, voice, and training live next to your
+        code. Project history is stored locally; selected model and speech
+        providers may receive the context you send them.
       </p>
       <div className="aiide-welcome-actions">
         {root ? (

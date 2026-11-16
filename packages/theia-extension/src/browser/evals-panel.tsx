@@ -2,6 +2,7 @@ import React from '@theia/core/shared/react';
 import type { Connection } from '../common/protocol.js';
 import { Call, Perform, Heading, Empty, duration, ago } from './shared.js';
 import { TraceView, ScoreChip } from './trace-view.js';
+import { EvalRegressionPanel } from './eval-regression-panel.js';
 
 const engineInfo: Record<string, { label: string; note: string }> = {
   transformers: {
@@ -649,6 +650,24 @@ export function EvalsPanel({
         )}
       </section>
 
+      <EvalRegressionPanel
+        detail={detail}
+        current={current}
+        experiments={experiments}
+        dataset={dataset}
+        call={call}
+        perform={perform}
+        useDataset={(file) => {
+          setFiles((old) => ({
+            ...old,
+            datasets: [...new Set([...old.datasets, file])],
+          }));
+          setDataset(file);
+        }}
+        exported={async () => {
+          setFiles(await call('evals.files'));
+        }}
+      />
       {detail && (
         <section className="aiide-card" aria-labelledby="result-title">
           <div className="aiide-section-title">

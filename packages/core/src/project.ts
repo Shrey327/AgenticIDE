@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { parse, stringify } from 'yaml';
 import { z } from 'zod';
 import { within } from './security';
@@ -49,21 +50,78 @@ export const projectSchema = z.object({
     .default({}),
 });
 export type Project = z.infer<typeof projectSchema>;
+export function ensurePrivateState(root: string) {
+  const directory = within(root, '.aiide', true);
+  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+  const file = within(root, '.aiide/.gitignore', true);
+  if (fs.existsSync(file)) {
+    if (!fs.statSync(file).isFile())
+      throw new Error('Runtime ignore policy must be a regular file');
+    return;
+  }
+  try {
+    fs.writeFileSync(
+      file,
+      '# AIIDE runtime data stays local; project configuration can be shared.\n*\n!.gitignore\n!project.yaml\n',
+      { flag: 'wx', mode: 0o600 },
+    );
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+  }
+}
+export function privateStateStatus(root: string) {
+  try {
+    const files = execFileSync(
+      'git',
+      ['-c', 'core.fsmonitor=false', 'ls-files', '-z', '--', '.aiide'],
+      {
+        cwd: root,
+        encoding: 'utf8',
+        timeout: 1000,
+        maxBuffer: 65536,
+        stdio: ['ignore', 'pipe', 'ignore'],
+      },
+    ).split('\0');
+    return {
+      trackedPrivate: files
+        .filter(
+          (file) =>
+            file &&
+            !['.aiide/project.yaml', '.aiide/.gitignore'].includes(file),
+        )
+        .slice(0, 20),
+    };
+  } catch {
+    return { trackedPrivate: [] as string[] };
+  }
+}
 export function loadProject(root: string): Project {
   const file = within(root, '.aiide/project.yaml', true);
   if (!fs.existsSync(file))
     return projectSchema.parse({ version: 1, name: path.basename(root) });
+  const info = fs.statSync(file);
+  if (!info.isFile() || info.size > 2 * 1024 * 1024)
+    throw new Error('Project manifest must be a regular file below 2 MB');
   return projectSchema.parse(parse(fs.readFileSync(file, 'utf8')));
 }
 export function saveProject(root: string, input: unknown): Project {
   const config = projectSchema.parse(input),
     file = within(root, '.aiide/project.yaml', true);
+  const content = stringify(config);
+  if (Buffer.byteLength(content) > 2 * 1024 * 1024)
+    throw new Error('Project manifest exceeds 2 MB');
   fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-  fs.writeFileSync(file, stringify(config), { mode: 0o600 });
+  ensurePrivateState(root);
+  fs.writeFileSync(file, content, { mode: 0o600 });
   return config;
 }
 export function detectEnvironment(root: string) {
   const exists = (f: string) => fs.existsSync(path.join(root, f));
+  if (
+    exists('pyproject.toml') &&
+    !fs.statSync(within(root, 'pyproject.toml')).isFile()
+  )
+    throw new Error('pyproject.toml must be a regular file');
   const pyproject = exists('pyproject.toml')
     ? fs.readFileSync(within(root, 'pyproject.toml'), 'utf8')
     : '';

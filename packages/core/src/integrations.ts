@@ -11,7 +11,7 @@ const packages: Record<string, string[]> = {
   langgraph: ['langgraph==1.0.5', 'langchain-openai==1.1.0'],
   qdrant: ['qdrant-client==1.16.1'],
   sklearn: ['scikit-learn==1.7.2'],
-  pytorch: ['torch==2.9.1'],
+  pytorch: ['torch==2.10.0'],
   finetune: ['transformers==4.57.3', 'peft==0.18.0', 'accelerate==1.12.0'],
   wandb: ['wandb==0.23.0'],
 };
@@ -44,6 +44,15 @@ export class Integrations {
     fs.mkdirSync(directory, { recursive: true });
     const baseline: Record<string, string | null> = {};
     for (const file of ['pyproject.toml', 'uv.lock']) {
+      const source = within(this.root, file, true);
+      if (
+        fs.existsSync(source) &&
+        (!fs.statSync(source).isFile() ||
+          fs.statSync(source).size > 4 * 1024 * 1024)
+      )
+        throw new Error(
+          'Integration manifests must be regular files below 4 MB',
+        );
       baseline[file] = fs.existsSync(path.join(this.root, file))
         ? fs.readFileSync(within(this.root, file), 'utf8')
         : null;

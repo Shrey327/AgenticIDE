@@ -40,17 +40,35 @@ export class HuggingFace {
     readonly assets: string,
   ) {}
   /** Runs a bundled Python module in the project environment, exchanging JSON over stdin/stdout. */
-  python(module: string, args: string[], input: unknown, timeout: number) {
+  python(
+    module: string,
+    args: string[],
+    input: unknown,
+    timeout: number,
+    signal?: AbortSignal,
+  ) {
     const configured = loadProject(this.root).environment.python;
     const python = configured.includes('/')
       ? path.resolve(this.root, configured)
       : configured;
-    return subprocess(python, ['-m', module, ...args], input, timeout, {
-      PATH: process.env.PATH,
-      HOME: process.env.HOME,
-      PYTHONPATH: path.join(this.assets, 'python'),
-      PYTHONNOUSERSITE: '1',
-    } as NodeJS.ProcessEnv);
+    return subprocess(
+      python,
+      [
+        '-I',
+        path.join(this.assets, 'python', 'aiide_runtime', 'launch.py'),
+        module,
+        ...args,
+      ],
+      input,
+      timeout,
+      {
+        PATH: process.env.PATH,
+        HOME: process.env.HOME,
+        PYTHONPATH: path.join(this.assets, 'python'),
+        PYTHONNOUSERSITE: '1',
+      } as NodeJS.ProcessEnv,
+      signal,
+    );
   }
   status() {
     return this.python('aiide_hf', ['status'], {}, 60000);
@@ -87,6 +105,7 @@ export class HuggingFace {
             this.root,
             `models/${entry.name}/aiide-model.json`,
           );
+          if (!fs.statSync(file).isFile()) return [];
           const meta = JSON.parse(fs.readFileSync(file, 'utf8'));
           return meta.format === 'aiide-hf-v1'
             ? [{ ...meta, path: `models/${entry.name}` }]
@@ -187,6 +206,8 @@ export class HuggingFace {
     if (!/^\.aiide\/hf-results\/[a-f0-9-]{36}\.json$/.test(file))
       throw new Error('Invalid generation result');
     const target = within(this.root, file, true);
+    if (fs.existsSync(target) && !fs.statSync(target).isFile())
+      throw new Error('Generation results must be regular files');
     return fs.existsSync(target)
       ? JSON.parse(fs.readFileSync(target, 'utf8'))
       : null;

@@ -148,11 +148,11 @@ try {
   );
   await click('Trace ↗');
   await page.waitForFunction(() =>
-    [...document.querySelectorAll('.aiide-span')].some((e) =>
+    [...document.querySelectorAll('.aiide-tt-row')].some((e) =>
       e.textContent.includes('example.pipeline'),
     ),
   );
-  const spans = await page.$$eval('.aiide-span', (elements) =>
+  const spans = await page.$$eval('.aiide-tt-row', (elements) =>
     elements.map((e) => e.innerText),
   );
   assert.ok(
@@ -163,7 +163,7 @@ try {
   await page.screenshot({
     path: process.env.AIIDE_SCREENSHOT || '/tmp/aiide-traces.png',
   });
-  await page.click('.aiide-span');
+  await page.click('.aiide-tt-row');
   await click('Open source');
   await page.waitForSelector('.monaco-editor');
   await page.click('[id="status-bar-aiide.open"]');

@@ -24,9 +24,20 @@ export function TracePanel({
       total: 0,
       items: [],
     });
+  const [exportSpan, setExportSpan] = React.useState<Span>();
+  const [exportFile, setExportFile] = React.useState(
+    'data/trace-regression.jsonl',
+  );
+  const [reference, setReference] = React.useState('');
+  const [reviewed, setReviewed] = React.useState(false);
+  const [exported, setExported] = React.useState('');
+  const [exporting, setExporting] = React.useState(false);
   React.useEffect(() => {
     setPage(0);
     setData({ total: 0, items: [] });
+    setExportSpan(undefined);
+    setExported('');
+    setReviewed(false);
   }, [run?.id]);
   React.useEffect(() => {
     if (!run) return;
@@ -56,6 +67,86 @@ export function TracePanel({
         text="Model calls, tool calls, retrieval, and evaluator scores as a run tree."
       />
       <RunSelect runs={runs} selected={run?.id || ''} select={select} />
+      {exportSpan && run && (
+        <section className="aiide-card">
+          <h3>Create a regression case from this trace</h3>
+          <p>
+            Inspect the captured input and supply a reference you have verified.
+            The trace's generated output is not automatically treated as
+            correct.
+          </p>
+          <pre tabIndex={0} aria-label="Regression trace input">
+            {JSON.stringify(
+              exportSpan.attributes.input ??
+                exportSpan.attributes['gen_ai.prompt'],
+              null,
+              2,
+            )}
+          </pre>
+          <label>
+            New trace regression dataset
+            <input
+              value={exportFile}
+              disabled={exporting}
+              onChange={(event) => setExportFile(event.target.value)}
+            />
+          </label>
+          <label>
+            Verified trace reference
+            <textarea
+              value={reference}
+              rows={4}
+              maxLength={100000}
+              disabled={exporting}
+              onChange={(event) => {
+                setReference(event.target.value);
+                setReviewed(false);
+              }}
+            />
+          </label>
+          <label className="aiide-checkbox">
+            <input
+              type="checkbox"
+              checked={reviewed}
+              disabled={exporting}
+              onChange={(event) => setReviewed(event.target.checked)}
+            />
+            I verified this reference against the source.
+          </label>
+          <button
+            disabled={exporting || !reviewed || !exportFile.trim()}
+            onClick={() =>
+              void perform(async () => {
+                setExporting(true);
+                try {
+                  const result = await call('evals.exportTrace', {
+                    runId: run.id,
+                    spanId: exportSpan.spanId,
+                    offset: page * 200,
+                    file: exportFile,
+                    expected: reference,
+                    reviewed: true,
+                  });
+                  setExported(result.file);
+                } finally {
+                  setExporting(false);
+                }
+              })
+            }
+          >
+            Export trace regression case
+          </button>
+          <button disabled={exporting} onClick={() => setExportSpan(undefined)}>
+            Close export
+          </button>
+          {exported && (
+            <p role="status">
+              Saved {exported}. Select it in Serve & evaluate to test a model
+              change.
+            </p>
+          )}
+        </section>
+      )}
       {!run ? (
         <Empty>Choose a run to inspect its trace.</Empty>
       ) : !data.total ? (
@@ -87,6 +178,18 @@ export function TracePanel({
               if (!span) return null;
               return (
                 <div className="aiide-actions">
+                  {node.input !== undefined && (
+                    <button
+                      onClick={() => {
+                        setExportSpan(span);
+                        setReviewed(false);
+                        setReference('');
+                        setExported('');
+                      }}
+                    >
+                      Create regression case
+                    </button>
+                  )}
                   {Boolean(span.attributes['code.filepath']) && (
                     <button
                       onClick={() =>
