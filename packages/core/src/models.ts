@@ -3,6 +3,7 @@ import path from 'node:path';
 import { z } from 'zod';
 import { endpoint, hash } from './security';
 import { Connection } from './types';
+import { retrievalJson } from './retrieval';
 
 const schema = z.object({
   id: z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/),
@@ -36,6 +37,7 @@ export class SystemVault implements Vault {
 
 export class Connections {
   private file: string;
+  private readonly shutdown = new AbortController();
   constructor(
     readonly directory: string,
     readonly vault: Vault = new SystemVault(),
@@ -43,6 +45,12 @@ export class Connections {
     this.file = path.join(directory, 'connections.json');
   }
   list(): Connection[] {
+    if (
+      fs.existsSync(this.file) &&
+      (!fs.lstatSync(this.file).isFile() ||
+        fs.statSync(this.file).size > 1024 * 1024)
+    )
+      throw new Error('Connections must be a regular JSON file below 1 MB');
     return fs.existsSync(this.file)
       ? JSON.parse(fs.readFileSync(this.file, 'utf8'))
       : [];
@@ -53,6 +61,7 @@ export class Connections {
     return connection;
   }
   async save(input: unknown, secret?: string) {
+    this.shutdown.signal.throwIfAborted();
     const connection: Connection = schema.parse(input);
     endpoint(connection.url);
     const previous = this.list().find((c) => c.id === connection.id);
@@ -60,11 +69,19 @@ export class Connections {
     const key = hash(`${this.directory}:${connection.id}:${connection.url}`);
     if (secret) {
       await this.vault.set(key, secret);
+      this.shutdown.signal.throwIfAborted();
       connection.credentialRef = key;
     } else if (previous?.url === connection.url)
       connection.credentialRef = previous.credentialRef;
     this.write(connection);
     return connection;
+  }
+  remove(id: string) {
+    const all = this.list().filter((c) => c.id !== id);
+    fs.writeFileSync(this.file + '.tmp', JSON.stringify(all, null, 2), {
+      mode: 0o600,
+    });
+    fs.renameSync(this.file + '.tmp', this.file);
   }
   write(connection: Connection) {
     const all = this.list().filter((c) => c.id !== connection.id);
@@ -81,6 +98,7 @@ export class Connections {
     signal?: AbortSignal,
     method?: string,
   ): Promise<Response> {
+    this.shutdown.signal.throwIfAborted();
     const connection = this.get(id);
     endpoint(connection.url);
     if (!resource.startsWith('/') || resource.includes('..'))
@@ -88,6 +106,7 @@ export class Connections {
     const secret = connection.credentialRef
       ? await this.vault.get(connection.credentialRef)
       : undefined;
+    this.shutdown.signal.throwIfAborted();
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -98,7 +117,10 @@ export class Connections {
       method: method ?? (body === undefined ? 'GET' : 'POST'),
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
-      signal: signal ?? AbortSignal.timeout(30000),
+      signal: AbortSignal.any([
+        this.shutdown.signal,
+        signal ?? AbortSignal.timeout(30000),
+      ]),
       redirect: 'error',
     });
     if (!response.ok)
@@ -108,6 +130,7 @@ export class Connections {
     return response;
   }
   async probe(id: string) {
+    this.shutdown.signal.throwIfAborted();
     const c = this.get(id);
     if (c.kind !== 'model' || !c.model)
       throw new Error('Select a model before testing capabilities');
@@ -176,19 +199,34 @@ export class Connections {
               : typeof result.choices?.[0]?.message?.content === 'string';
         }
       } catch (error) {
+        this.shutdown.signal.throwIfAborted();
         errors[capability] = String(error);
       }
     }
     this.write({ ...c, capabilities });
     return { capabilities, errors };
   }
-  async embed(id: string, input: string[]): Promise<number[][]> {
+  close() {
+    this.shutdown.abort(new Error('Connections are closed'));
+  }
+  async embed(
+    id: string,
+    input: string[],
+    signal?: AbortSignal,
+  ): Promise<number[][]> {
     const c = this.get(id),
-      response = await this.request(id, '/embeddings', {
-        model: c.model,
-        input,
-      });
-    const body: any = await response.json();
+      response = await this.request(
+        id,
+        '/embeddings',
+        {
+          model: c.model,
+          input,
+        },
+        signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(30000)])
+          : undefined,
+      );
+    const body: any = await retrievalJson(response);
     const vectors = body.data
       ?.sort((a: any, b: any) => a.index - b.index)
       .map((d: any) => d.embedding);

@@ -1,0 +1,8 @@
+.venv
+.git
+.aiide
+.aiide-memory
+models
+.env*
+__pycache__
+*.log

@@ -73,7 +73,12 @@ export class Lab {
   private call(mode: string, request: unknown, timeout = 120000) {
     return subprocess(
       this.python(),
-      ['-m', 'aiide_lab', mode],
+      [
+        '-I',
+        path.join(this.assets, 'python', 'aiide_runtime', 'launch.py'),
+        'aiide_lab',
+        mode,
+      ],
       request,
       timeout,
       {
@@ -161,12 +166,9 @@ export class Lab {
       .filter((e) => e.isDirectory())
       .flatMap((e) => {
         try {
-          const meta = JSON.parse(
-            fs.readFileSync(
-              within(this.root, `models/${e.name}/model.json`),
-              'utf8',
-            ),
-          );
+          const file = within(this.root, `models/${e.name}/model.json`);
+          if (!fs.statSync(file).isFile()) return [];
+          const meta = JSON.parse(fs.readFileSync(file, 'utf8'));
           return meta.format === 'aiide-lab-v1'
             ? [{ ...meta, path: `models/${e.name}` }]
             : [];

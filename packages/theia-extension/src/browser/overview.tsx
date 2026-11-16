@@ -39,6 +39,18 @@ const templates = [
     title: 'scikit-learn experiment',
     text: 'Classic ML experiment with tracked metrics.',
   },
+  {
+    id: 'rl',
+    icon: 'debug-step-over',
+    title: 'Local RL environment',
+    text: 'Seeded Q-learning, held-out evaluation, and saved policies.',
+  },
+  {
+    id: 'voice',
+    icon: 'mic',
+    title: 'LiveKit voice agent',
+    text: 'LiveKit worker with speech, VAD, interruption, and tracked sessions.',
+  },
 ];
 
 type Step = {
@@ -92,7 +104,8 @@ export function Overview({
     !commands.includes('setup') ||
     runs.some((r) => r.name === 'setup' && done(r));
   const training = runs.filter((r) => r.training);
-  const ragRuns = (name: string) => runs.some((r) => r.name === name);
+  const ragRuns = (name: string) =>
+    runs.some((r) => r.name === name && done(r));
   const workflows: {
     id: string;
     icon: string;
@@ -102,6 +115,47 @@ export function Overview({
     cta: string;
     steps: Step[];
   }[] = [
+    {
+      id: 'knowledge',
+      icon: 'book',
+      title: 'Build project memory',
+      text: 'Capture decisions, compile source-linked drafts, find backlinks, and attach verified context to your assistant.',
+      tab: 'Knowledge',
+      cta: 'Open project memory',
+      steps: [],
+    },
+    {
+      id: 'voice',
+      icon: 'mic',
+      title: 'Prototype a voice agent',
+      text: 'Dictate or type turns, test your model, hear replies, and save a transcript to project memory.',
+      tab: 'Voice',
+      cta: 'Open voice agents',
+      steps: [
+        {
+          label: 'Connect a chat model',
+          done: models.length > 0,
+          tab: 'Models',
+        },
+      ],
+    },
+    {
+      id: 'rl',
+      icon: 'debug-step-over',
+      title: 'Train an RL policy',
+      text: 'Run seeded environments, compare held-out rewards with a random baseline, and replay saved policies.',
+      tab: 'RL',
+      cta: 'Open RL environments',
+      steps: [
+        {
+          label: 'Complete a policy training run',
+          done: runs.some(
+            (r) => r.training?.parameters?.workflow === 'rl' && done(r),
+          ),
+          tab: 'RL',
+        },
+      ],
+    },
     {
       id: 'train',
       icon: 'pulse',
@@ -216,6 +270,24 @@ export function Overview({
 
   return (
     <>
+      {!!status.privacy?.trackedPrivate?.length && (
+        <section className="aiide-card" role="alert">
+          <h3>Private runtime files are tracked by Git</h3>
+          <p>
+            Ignore rules do not remove files that Git already tracks. Review
+            these in Source Control and remove them from Git's index while
+            keeping your local copies. They can contain chat history, drafts or
+            telemetry.
+          </p>
+          <ul>
+            {status.privacy.trackedPrivate.map((file: string) => (
+              <li key={file}>
+                <code>{file}</code>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <div className="aiide-section-title">
         <div>
           <h2>{runs.length ? 'Welcome back' : 'What are you working on?'}</h2>
@@ -257,18 +329,20 @@ export function Overview({
                   <p>{w.text}</p>
                 </div>
               </div>
-              <div
-                className="aiide-progress"
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={w.steps.length}
-                aria-valuenow={complete}
-                aria-label={`${w.title}: ${complete} of ${w.steps.length} steps done`}
-              >
-                <span
-                  style={{ width: `${(complete / w.steps.length) * 100}%` }}
-                />
-              </div>
+              {w.steps.length > 0 && (
+                <div
+                  className="aiide-progress"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={w.steps.length}
+                  aria-valuenow={complete}
+                  aria-label={`${w.title}: ${complete} of ${w.steps.length} steps done`}
+                >
+                  <span
+                    style={{ width: `${(complete / w.steps.length) * 100}%` }}
+                  />
+                </div>
+              )}
               <ol className="aiide-steps">
                 {w.steps.map((s) => (
                   <li key={s.label} className={s.done ? 'done' : ''}>
@@ -289,8 +363,10 @@ export function Overview({
               </ol>
               <div className="aiide-workflow-foot">
                 <small>
-                  {complete}/{w.steps.length} done
-                  {next ? ` · next: ${next.label.toLowerCase()}` : ' · ready'}
+                  {w.steps.length
+                    ? `${complete}/${w.steps.length} done`
+                    : 'No model required for notes'}
+                  {next ? ` · next: ${next.label.toLowerCase()}` : ''}
                 </small>
                 <button
                   className={next ? '' : 'aiide-primary'}

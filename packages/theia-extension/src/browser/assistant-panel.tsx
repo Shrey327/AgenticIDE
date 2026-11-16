@@ -1,4 +1,6 @@
 import React from '@theia/core/shared/react';
+import { VoiceInput } from './voice-input.js';
+import { useProjectDraft } from './use-project-draft.js';
 import type { Run, Span, Connection, EventRecord } from '../common/protocol.js';
 import {
   Call,
@@ -27,14 +29,57 @@ export function AssistantPanel({
   setContext: (s: string) => void;
   selection: () => string;
 }) {
-  const [model, setModel] = React.useState(''),
-    [prompt, setPrompt] = React.useState(''),
-    [autonomous, setAutonomous] = React.useState(false),
+  const [draft, setDraft, draftError] = useProjectDraft(call, 'assistant', {
+    model: '',
+    prompt: '',
+    command: 'python --version',
+  });
+  const { model, prompt, command } = draft;
+  const setModel = (value: string) =>
+    setDraft((previous) => ({ ...previous, model: value }));
+  const setPrompt = (update: React.SetStateAction<string>) =>
+    setDraft((previous) => ({
+      ...previous,
+      prompt: typeof update === 'function' ? update(previous.prompt) : update,
+    }));
+  const setCommand = (value: string) =>
+    setDraft((previous) => ({ ...previous, command: value }));
+  const [autonomous, setAutonomous] = React.useState(false),
     [chat, setChat] = React.useState<any>(),
     [review, setReview] = React.useState<any>();
-  const [command, setCommand] = React.useState('python --version'),
-    [session, setSession] = React.useState(''),
+  const [session, setSession] = React.useState(''),
     [terminal, setTerminal] = React.useState('');
+  const [history, setHistory] = React.useState<any[]>([]);
+  const [historyError, setHistoryError] = React.useState('');
+  React.useEffect(() => {
+    let mounted = true;
+    void call('assistant.list')
+      .then(async (records) => {
+        if (!mounted || !Array.isArray(records)) return;
+        setHistory(records);
+        if (records.length) {
+          const saved = await call('assistant.status', { id: records[0].id });
+          if (mounted) {
+            setChat(saved);
+            if (saved.session) setSession(saved.session);
+          }
+        }
+      })
+      .catch((error) => {
+        if (mounted) setHistoryError(String(error));
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [call]);
+  React.useEffect(() => {
+    if (!chat) return;
+    void call('assistant.list')
+      .then((records) => {
+        if (Array.isArray(records)) setHistory(records);
+      })
+      .catch((error) => setHistoryError(String(error)));
+  }, [chat?.id, chat?.status, call]);
   React.useEffect(() => {
     if (!chat || chat.status !== 'running') return;
     const timer = setInterval(() => {
@@ -56,6 +101,52 @@ export function AssistantPanel({
       />
       <div className="aiide-columns wide-left">
         <section className="aiide-card">
+          {draftError && (
+            <p role="alert">
+              Could not save or restore the local draft: {draftError}
+            </p>
+          )}
+          {!!history.length && (
+            <label>
+              Saved requests
+              <select
+                value={chat?.id || ''}
+                onChange={(event) => {
+                  const id = event.target.value;
+                  if (!id) {
+                    setChat(undefined);
+                    setReview(undefined);
+                    return;
+                  }
+                  void perform(async () => {
+                    const saved = await call('assistant.status', { id });
+                    setChat(saved);
+                    setSession(saved.session || '');
+                    setReview(undefined);
+                  });
+                }}
+              >
+                <option value="">New request</option>
+                {history.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.status} · {item.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {historyError && (
+            <p role="alert">
+              Could not restore request history: {historyError}
+            </p>
+          )}
+          <p className="aiide-note">
+            Requests and replies are saved locally under .aiide/assistant,
+            independently of telemetry capture. Unsent prompt drafts also
+            autosave locally; clear the prompt to remove its draft text. Delete
+            a saved request to remove its history; staged source changes remain
+            separately reviewable in Sandboxes.
+          </p>
           <ConnectionSelect
             label="Coding model"
             connections={connections}
@@ -72,6 +163,12 @@ export function AssistantPanel({
               placeholder="Explain this trace, fix a failing test, or build a feature…"
             />
           </label>
+          <VoiceInput
+            append={(text) =>
+              setPrompt((value) => (value ? value + ' ' : '') + text)
+            }
+            disabled={chat?.status === 'running'}
+          />
           <label className="aiide-checkbox">
             <input
               type="checkbox"
@@ -134,6 +231,10 @@ export function AssistantPanel({
           )}
           {chat && (
             <div className="aiide-response">
+              <details>
+                <summary>Original request</summary>
+                <pre>{chat.prompt}</pre>
+              </details>
               <span className={`aiide-badge ${chat.status}`} role="status">
                 {chat.status}
               </span>
@@ -146,6 +247,30 @@ export function AssistantPanel({
                 </div>
               ))}
               {chat.error && <p role="alert">{chat.error}</p>}
+              {chat.status !== 'running' && (
+                <div className="aiide-toolbar">
+                  <button
+                    onClick={() => {
+                      setPrompt(chat.prompt || '');
+                      setModel(chat.model || model);
+                    }}
+                  >
+                    Reuse request
+                  </button>
+                  <button
+                    onClick={() =>
+                      void perform(async () => {
+                        await call('assistant.delete', { id: chat.id });
+                        setChat(undefined);
+                        setReview(undefined);
+                        setHistory(await call('assistant.list'));
+                      })
+                    }
+                  >
+                    Delete request history
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </section>

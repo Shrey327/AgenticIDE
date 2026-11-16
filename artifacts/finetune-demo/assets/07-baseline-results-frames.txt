@@ -1,0 +1,5 @@
+file '07-baseline-results-frame-0.png'
+duration 7.850
+file '07-baseline-results-frame-1.png'
+duration 8.762
+file '07-baseline-results-frame-1.png'

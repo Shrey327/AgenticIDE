@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import resource
+import re
 import subprocess
 import sys
 import time
@@ -95,12 +96,18 @@ def load_checkpoint(model, optimizer, directory=None):
     directory = directory or os.getenv('AIIDE_RESUME_CHECKPOINT')
     if not directory:
         return 0
+    version=re.fullmatch(r'(\d+)\.(\d+)\.(\d+)(?:\+[A-Za-z0-9_.-]+)?',str(torch.__version__))
+    if not version or tuple(map(int,version.groups()))<(2,10,0):
+        raise ValueError('Checkpoint loading requires Torch >=2.10.0; older weights_only loaders are vulnerable to CVE-2026-24747')
     directory = Path(directory)
-    metadata = json.loads((directory / 'aiide-checkpoint.json').read_text())
+    metadata_file=directory/'aiide-checkpoint.json'
+    if metadata_file.is_symlink() or not metadata_file.is_file() or metadata_file.stat().st_size>1024*1024:
+        raise ValueError('Checkpoint metadata must be a regular JSON file below 1 MB')
+    metadata = json.loads(metadata_file.read_text())
     if metadata.get('format') != 'aiide-pytorch-v1' or metadata.get('file') != 'checkpoint.pt':
         raise ValueError('Unsupported checkpoint format')
     file = directory / 'checkpoint.pt'
-    if file.is_symlink() or _digest(file) != metadata['sha256']:
+    if file.is_symlink() or not file.is_file() or _digest(file) != metadata['sha256']:
         raise ValueError('Checkpoint checksum mismatch')
     state = torch.load(file, map_location='cpu', weights_only=True)
     model.load_state_dict(state['model'])

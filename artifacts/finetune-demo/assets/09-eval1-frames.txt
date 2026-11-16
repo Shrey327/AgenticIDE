@@ -1,0 +1,5 @@
+file '09-eval1-frame-0.png'
+duration 7.290
+file '09-eval1-frame-1.png'
+duration 7.532
+file '09-eval1-frame-1.png'

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { z } from 'zod';
 import { within, redact } from './security';
 
@@ -27,50 +27,135 @@ export const sshSchema = z.object({
 export type SshProfile = z.infer<typeof sshSchema>;
 export const quote = (s: string) => "'" + s.replaceAll("'", "'\\''") + "'";
 
+let helperPython: string | undefined;
+let activeHelpers = 0;
 export function subprocess(
   command: string,
   args: string[],
   input: unknown,
   timeout = 30000,
   env = process.env,
+  signal?: AbortSignal,
 ): Promise<any> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      env,
-      stdio: ['pipe', 'pipe', 'pipe'],
+    if (signal?.aborted) {
+      reject(new Error('Request cancelled'));
+      return;
+    }
+    if (activeHelpers >= 8)
+      throw new Error(
+        'Eight helper operations are already active; wait or cancel one before retrying',
+      );
+    const payload = JSON.stringify(input);
+    if (
+      typeof payload !== 'string' ||
+      Buffer.byteLength(payload) > 24 * 1024 * 1024
+    )
+      throw new Error('Helper input must be valid JSON below 24 MB');
+    const supervised = process.platform !== 'win32';
+    const helper = path.join(
+      process.env.AIIDE_RESOURCES ||
+        path
+          .resolve(__dirname, '../resources')
+          .replace(/([\\/])app\.asar(?=[\\/])/, '$1app.asar.unpacked'),
+      'python',
+      'aiide_runtime',
+      'local.py',
+    );
+    if (supervised) {
+      if (!fs.statSync(helper).isFile())
+        throw new Error(
+          'Helper supervisor is unavailable; rebuild core assets',
+        );
+      helperPython ??= execFileSync(
+        'python3',
+        ['-I', '-c', 'import sys;print(sys.executable)'],
+        { encoding: 'utf8', timeout: 5000, stdio: ['ignore', 'pipe', 'pipe'] },
+      ).trim();
+    }
+    const child = spawn(
+      supervised ? helperPython! : command,
+      supervised ? ['-I', helper, '--forward-stdin', command, ...args] : args,
+      {
+        env,
+        detached: supervised,
+        stdio: supervised
+          ? ['pipe', 'pipe', 'pipe', 'pipe', 'pipe']
+          : ['pipe', 'pipe', 'pipe'],
+      },
+    );
+    activeHelpers++;
+    child.once('close', () => {
+      activeHelpers--;
     });
+    child.stdio[3]?.on('error', () => {});
+    let terminationError: Error | undefined;
+    let terminationTimer: ReturnType<typeof setTimeout> | undefined;
+    const terminate = (error: Error) => {
+      if (settled || terminationError) return;
+      terminationError = error;
+      try {
+        if (supervised) {
+          child.stdio[3]?.destroy();
+          child.kill('SIGTERM');
+        } else child.kill('SIGKILL');
+      } catch {
+        child.kill('SIGKILL');
+      }
+      terminationTimer = setTimeout(() => {
+        child.kill('SIGKILL');
+        child.stdin!.destroy();
+        child.stdout!.destroy();
+        child.stderr!.destroy();
+        finish(
+          new Error(
+            `${error.message}; helper termination could not be confirmed`,
+          ),
+        );
+      }, 5000);
+    };
     const chunks: Buffer[] = [];
     let bytes = 0,
       errors = '',
       settled = false;
+    let abort: (() => void) | undefined;
     const finish = (error?: Error, result?: unknown) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      clearTimeout(terminationTimer);
+      if (abort) signal?.removeEventListener('abort', abort);
       if (error) reject(error);
       else resolve(result);
     };
     const timer = setTimeout(() => {
-      child.kill('SIGKILL');
-      finish(
+      terminate(
         new Error(
           'Request timed out; reconnect to inspect the job before retrying',
         ),
       );
     }, timeout);
-    child.stdout.on('data', (chunk: Buffer) => {
+    abort = () => {
+      terminate(new Error('Request cancelled'));
+    };
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) abort();
+    child.stdout!.on('data', (chunk: Buffer) => {
       bytes += chunk.length;
       if (bytes > 24 * 1024 * 1024) {
-        child.kill('SIGKILL');
-        finish(new Error('Response exceeds 24 MB'));
+        terminate(new Error('Response exceeds 24 MB'));
       } else chunks.push(chunk);
     });
-    child.stderr.on('data', (chunk) => {
+    child.stdio[4]?.on('data', (chunk) => {
       errors = (errors + String(chunk)).slice(-3000);
     });
-    child.stdin.on('error', () => {});
+    child.stderr!.on('data', (chunk) => {
+      errors = (errors + String(chunk)).slice(-3000);
+    });
+    child.stdin!.on('error', () => {});
     child.on('error', (error) => finish(error));
     child.on('close', (code) => {
+      if (terminationError) return finish(terminationError);
       if (code !== 0)
         return finish(
           new Error(`Process exited ${code}: ${String(redact(errors, true))}`),
@@ -86,7 +171,7 @@ export function subprocess(
         finish(error as Error);
       }
     });
-    child.stdin.end(JSON.stringify(input));
+    child.stdin!.end(payload);
   });
 }
 
@@ -111,6 +196,12 @@ export class Ssh {
     }
   }
   list(): SshProfile[] {
+    if (
+      fs.existsSync(this.file) &&
+      (!fs.lstatSync(this.file).isFile() ||
+        fs.statSync(this.file).size > 1024 * 1024)
+    )
+      throw new Error('SSH profiles must be a regular JSON file below 1 MB');
     return fs.existsSync(this.file)
       ? JSON.parse(fs.readFileSync(this.file, 'utf8')).map((p: unknown) =>
           sshSchema.parse(p),
@@ -171,7 +262,10 @@ export class Ssh {
       args.push('-i', profile.identityFile, '-o', 'IdentitiesOnly=yes');
     if (profile.knownHostsFile)
       args.push('-o', `UserKnownHostsFile=${profile.knownHostsFile}`);
-    args.push(profile.host, `${quote(profile.python)} -c ${quote(bootstrap)}`);
+    args.push(
+      profile.host,
+      `${quote(profile.python)} -I -c ${quote(bootstrap)}`,
+    );
     return subprocess('ssh', args, {
       ...request,
       root: profile.root,
@@ -179,7 +273,7 @@ export class Ssh {
     });
   }
   local(root: string, request: Record<string, unknown>, python = 'python3') {
-    return subprocess(python, ['-c', bootstrap], {
+    return subprocess(python, ['-I', '-c', bootstrap], {
       ...request,
       root,
       files: this.files,

@@ -1,0 +1,7 @@
+file '05-try-frame-0.png'
+duration 13.050
+file '05-try-frame-1.png'
+duration 5.710
+file '05-try-frame-2.png'
+duration 13.654
+file '05-try-frame-2.png'

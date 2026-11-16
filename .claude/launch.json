@@ -24,6 +24,30 @@
         "--port=3090"
       ],
       "port": 3090
+    },
+    {
+      "name": "aiide-browser-qwen",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "start:browser",
+        "--",
+        "/Users/shreyansh/Documents/AgenticIDE/artifacts/qwen-smoke/workspace",
+        "--port=3100"
+      ],
+      "port": 3100
+    },
+    {
+      "name": "aiide-demo-record",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "start:browser",
+        "--",
+        "/Users/shreyansh/Documents/AgenticIDE/artifacts/finetune-demo/recording",
+        "--port=3120"
+      ],
+      "port": 3120
     }
   ]
 }

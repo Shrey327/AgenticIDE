@@ -1,0 +1,36 @@
+{
+  "baseline": {
+    "exact": 0,
+    "fields": 26,
+    "perRequest": 39.1,
+    "aggregate": 38.7,
+    "p50": 1,
+    "outputTokens": 1509
+  },
+  "train1_min": 5,
+  "round1": {
+    "exact": 55,
+    "fields": 87,
+    "perRequest": 24.5,
+    "aggregate": 24.2,
+    "p50": 0.9,
+    "outputTokens": 839
+  },
+  "round2": {
+    "exact": 70,
+    "fields": 91,
+    "perRequest": 27.4,
+    "aggregate": 26.9,
+    "p50": 0.8,
+    "outputTokens": 842
+  },
+  "agent_mean": "0.81",
+  "vllm": {
+    "exact": 73,
+    "fields": 91,
+    "perRequest": 35.7,
+    "aggregate": 72.6,
+    "p50": 0.6,
+    "outputTokens": 842
+  }
+}

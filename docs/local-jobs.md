@@ -1,0 +1,15 @@
+# Local job lifecycle
+
+On macOS and Linux, every local run starts through the IDE's bundled Python supervisor. This covers configured project commands and built-in voice, RL, training and serving jobs. Host `python3` is required in addition to the project's selected interpreter. The supervisor uses only the Python standard library in isolated mode; the actual job receives its original executable, argument array, environment, working directory and telemetry settings. No shell is introduced.
+
+The IDE keeps a private pipe open to each supervisor. Closing the workspace cancels its jobs. A crash or `SIGKILL` closes that pipe at the OS level, so the supervisor also detects abrupt IDE death without comparing parent PIDs. A cancelled or orphaned job receives `SIGTERM` for checkpointing, followed by `SIGKILL` after three seconds if its process group remains. The supervisor cleans up leftover descendants when the main command completes, too. Target processes do not inherit the liveness or launch-diagnostic descriptors.
+
+Command launch failures are recorded as diagnostic events even when content capture is off. Job stdout/stderr still obey the existing content setting and output budget. After an unexpected IDE exit, reopening the workspace marks unfinished local run records as interrupted. A closed workspace rejects new launches, including those that were waiting for service credentials during shutdown.
+
+This is lifecycle management for trusted local project commands, not a host-code sandbox. Descendants that deliberately detach into another session can escape a POSIX process group; use the Docker sandbox for untrusted generated code. Windows currently retains direct-child cancellation and does not provide these parent-death/process-tree guarantees; Windows Job Objects remain required before claiming that support.
+
+Run `node scripts/test-local-jobs.mjs` for actual process tests. They verify literal arguments and environment propagation, capture-off launch diagnostics, graceful checkpoints followed by forced termination, leftover-descendant cleanup, a spawned IDE parent killed with `SIGKILL`, and refusal to launch after shutdown. POSIX process tests explicitly skip on Windows.
+
+Recorded IDE built-in Python workflows and their inspection helpers use an isolated, allowlisted bundled launcher. A workspace package or `PYTHONPATH` cannot replace the IDE's voice/RL/Hub/lab runtime. Normal user project commands retain their ordinary Python import behavior; approved custom factories explicitly execute trusted project code.
+
+JSON helpers for document, bundle, model, evaluation and inspection work also use the POSIX parent-death supervisor. Their stdin is forwarded as data while private liveness/diagnostic descriptors are never inherited by the target. Cancellation waits for helper termination, and abrupt IDE death cleans the process group without reopening. A backend admits at most eight concurrent helpers, with 24 MiB JSON input/output limits; excess work fails visibly rather than spawning more processes. Windows retains direct-child behavior.

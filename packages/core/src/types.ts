@@ -82,3 +82,22 @@ export interface EngineeringService {
 }
 export const EngineeringService = Symbol('EngineeringService');
 export const servicePath = '/services/ai-engineering';
+/** One step of a LangSmith-style run tree, shared by evaluations and the trace viewer. */
+export interface TraceNode {
+  id: string;
+  parent?: string;
+  name: string;
+  /** chain | llm | tool | retriever | evaluator | other */
+  kind: string;
+  start: number;
+  end: number;
+  status: 'ok' | 'error';
+  /** Plain text, OpenAI-style chat messages, or JSON. */
+  input?: unknown;
+  output?: unknown;
+  model?: string;
+  tokens?: { input?: number; output?: number };
+  score?: number;
+  error?: string;
+  metadata?: Record<string, unknown>;
+}

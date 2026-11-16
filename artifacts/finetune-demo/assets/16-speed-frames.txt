@@ -1,0 +1,7 @@
+file '16-speed-frame-0.png'
+duration 10.330
+file '16-speed-frame-1.png'
+duration 10.110
+file '16-speed-frame-2.png'
+duration 6.065
+file '16-speed-frame-2.png'

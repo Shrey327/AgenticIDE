@@ -1,0 +1,5 @@
+file '03-setup-frame-0.png'
+duration 8.730
+file '03-setup-frame-1.png'
+duration 12.785
+file '03-setup-frame-1.png'

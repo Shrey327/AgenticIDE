@@ -1,0 +1,7 @@
+file '08-train-frame-0.png'
+duration 13.610
+file '08-train-frame-1.png'
+duration 5.790
+file '08-train-frame-2.png'
+duration 7.576
+file '08-train-frame-2.png'

@@ -5,7 +5,13 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { Store } from './store';
 import { Telemetry } from './telemetry';
-import { loadProject, saveProject, detectEnvironment } from './project';
+import {
+  loadProject,
+  saveProject,
+  detectEnvironment,
+  ensurePrivateState,
+  privateStateStatus,
+} from './project';
 import { Connections } from './models';
 import { Runs } from './runs';
 import { Sandbox } from './sandbox';
@@ -22,6 +28,15 @@ import { Training } from './training';
 import { Wandb } from './wandb';
 import { Lab } from './lab';
 import { HuggingFace } from './huggingface';
+import { Servers } from './serving';
+import { Evals } from './evals';
+import { Knowledge } from './knowledge';
+import { ReinforcementLearning } from './rl';
+import { VoiceAgents } from './voice';
+import { Drafts } from './drafts';
+import { ProjectBundles } from './project-bundles';
+import { Documents } from './documents';
+import { TaskEvidence } from './task-evidence';
 import { hash, within } from './security';
 import { RpcRequest, Run } from './types';
 
@@ -52,16 +67,28 @@ export class Workspace {
   readonly wandb: Wandb;
   readonly lab: Lab;
   readonly huggingface: HuggingFace;
+  readonly servers: Servers;
+  readonly evals: Evals;
+  readonly knowledge: Knowledge;
+  readonly rl: ReinforcementLearning;
+  readonly voice: VoiceAgents;
+  readonly drafts: Drafts;
+  readonly bundles: ProjectBundles;
+  readonly documents: Documents;
+  readonly evidence: TaskEvidence;
   private qdrantName: string;
   private managedQdrant = false;
   private release?: () => void;
   private closed = false;
+  private closing?: Promise<void>;
+  private readonly pending = new Set<Promise<unknown>>();
   private constructor(root: string) {
     this.root = fs.realpathSync(root);
     if (!fs.statSync(this.root).isDirectory())
       throw new Error('Workspace must be a directory');
     this.directory = within(this.root, '.aiide', true);
     fs.mkdirSync(this.directory, { recursive: true, mode: 0o700 });
+    ensurePrivateState(this.root);
     const config = loadProject(this.root);
     this.store = new Store(
       within(this.root, '.aiide/workspace.sqlite', true),
@@ -100,6 +127,31 @@ export class Workspace {
     this.wandb = new Wandb(this.root, assets, this.connections);
     this.lab = new Lab(this.root, this.runs, assets);
     this.huggingface = new HuggingFace(this.root, this.runs, assets);
+    this.servers = new Servers(this.runs, this.connections, this.huggingface);
+    this.evals = new Evals(
+      this.root,
+      this.store,
+      this.connections,
+      this.huggingface,
+    );
+    this.knowledge = new Knowledge(this.root, this.connections);
+    this.rl = new ReinforcementLearning(this.root, this.runs, assets);
+    this.voice = new VoiceAgents(
+      this.root,
+      this.runs,
+      this.connections,
+      assets,
+    );
+    this.knowledge.start();
+    this.drafts = new Drafts(this.root);
+    this.bundles = new ProjectBundles(this.root, assets);
+    this.documents = new Documents(this.root, assets);
+    this.evidence = new TaskEvidence(
+      this.root,
+      this.store,
+      this.evals,
+      this.sandbox,
+    );
     this.qdrantName = 'aiide-qdrant-' + hash(this.root).slice(0, 12);
   }
   static async open(root: string) {
@@ -141,6 +193,7 @@ export class Workspace {
     try {
       workspace = new Workspace(root);
       workspace.release = release;
+      await workspace.sandbox.recover();
       await workspace.telemetry.start();
       await workspace.telemetry.startCollector(
         path.join(assets, 'otelcol-contrib'),
@@ -153,9 +206,21 @@ export class Workspace {
       throw error;
     }
   }
-  async operation(
+  operation(operation: string, args: Record<string, any> = {}): Promise<any> {
+    if (this.closed)
+      return Promise.reject(
+        new Error(
+          'Workspace is closed; reopen it before starting another operation',
+        ),
+      );
+    const pending = this.dispatch(operation, args);
+    this.pending.add(pending);
+    void pending.finally(() => this.pending.delete(pending)).catch(() => {});
+    return pending;
+  }
+  private async dispatch(
     operation: string,
-    args: Record<string, any> = {},
+    args: Record<string, any>,
   ): Promise<any> {
     switch (operation) {
       case 'workflows.catalog':
@@ -163,7 +228,7 @@ export class Workspace {
           setup: {
             'project.create': {
               template:
-                'sklearn | finetune | pytorch | python | rag | langgraph',
+                'sklearn | finetune | pytorch | python | rag | langgraph | rl | voice',
               name: 'new-folder-name',
             },
             nextStep:
@@ -246,9 +311,278 @@ export class Workspace {
             },
             'hf.result': { file: 'output path returned by hf.generate' },
           },
+          evaluation: {
+            steps: [
+              'hf.models',
+              'serving.start (or use any model connection)',
+              'serving.list until state is ready; note its connection',
+              'evals.files',
+              'evals.run',
+              'inspect_run until completed',
+              'evals.get',
+              'evals.score for agent_review cases',
+            ],
+            'serving.start': {
+              model: 'path from hf.models (base or LoRA adapter)',
+              engine: 'transformers | vllm | sglang | mlx',
+              device: 'auto',
+            },
+            'evals.run': {
+              dataset: 'data/eval.jsonl',
+              target: 'connection from serving.list',
+              scorers: [
+                { type: 'contains' },
+                { type: 'tool_call' },
+                { type: 'agent', rubric: 'What a good answer looks like' },
+              ],
+              temperature: 0,
+              maxTokens: 512,
+            },
+            datasetRow:
+              '{"input":"...","expected":"...","tools":[OpenAI function specs],"expected_tool":{"name":"...","arguments":{}}}; or "messages" instead of "input"',
+            scorerTypes:
+              'exact, contains, regex {pattern}, json, tool_call, judge {connection, rubric}, python {file defining score(output, expected, case, tool_calls)}, agent {rubric}',
+            'evals.get': { runId: 'run ID', offset: 0, limit: 50 },
+            'evals.score': {
+              runId: 'run ID',
+              scores: [{ index: 0, score: 1, reason: 'why' }],
+            },
+            check_evaluation_gate: {
+              runId: 'completed evaluation ID',
+              thresholds: { exact: 0.9 },
+              maxErrors: 0,
+            },
+            versions:
+              'Each evaluation stores immutable dataset/configuration hashes. Use check_evaluation_gate with a compatible baseline to detect regressions. Export reviewed references through the IDE.',
+          },
+          knowledge: {
+            steps: [
+              'search_knowledge',
+              'read_knowledge',
+              'attach selected notes in the IDE or read them as reference through MCP',
+            ],
+            search_knowledge: { query: 'project decision' },
+            read_knowledge: { id: 'note ID from search_knowledge' },
+            writes:
+              'Use Knowledge in the IDE for source import, opt-in automatic maintenance, proposal/conflict review and history restore. Automatic refresh never overwrites accepted facts. External agents can propose .aiide-memory Markdown changes in a staged session for review.',
+          },
+          reinforcementLearning: {
+            steps: [
+              'rl.status / rl.catalog',
+              'rl.train',
+              'inspect_run until completed',
+              'inspect_metrics',
+              'rl.policies',
+              'rl.rollout',
+            ],
+            'rl.train': { episodes: 500, seed: 42 },
+            neuralExample: {
+              algorithm: 'ppo',
+              environment: 'CartPole-v1',
+              timesteps: 10000,
+              workers: 2,
+              seeds: [42, 43],
+              evalEpisodes: 10,
+              maxSteps: 200,
+            },
+            continuousExample: {
+              algorithm: 'sac',
+              environment: 'Pendulum-v1',
+              timesteps: 10000,
+              workers: 1,
+              seeds: [42],
+              evalEpisodes: 10,
+              maxSteps: 200,
+            },
+            'rl.rollout': { policy: 'path from rl.policies', seed: 1000 },
+            limits:
+              'Tabular Q-learning plus optional local CPU PPO/SAC, process workers, held-out multi-seed evaluation and safe checkpoint/resume. Neural algorithms require the RL template advanced extra. No LLM alignment, custom Python plugins, GPU/distributed training or robotics acceptance is implied.',
+          },
+          voice: {
+            location: 'Build → Voice agents',
+            steps: [
+              'Create a voice template and install its locked environment',
+              'Configure a LiveKit server/profile and chat/speech connections in the IDE',
+              'inspect_workflow voice.status / voice.profiles',
+              'run_workflow voice.start with an existing profile',
+              'Join from the IDE with an explicitly enabled microphone',
+              'Inspect the recorded run, transcript and latency metrics',
+            ],
+            'voice.start': { id: 'saved profile ID', mode: 'dev | start' },
+            limits:
+              'Realtime media uses LiveKit; speech can use a configured local compatible endpoint. Profile secrets, room tokens and local-engine startup are IDE-only operations. Text dictation remains available separately; its browser provider may process audio remotely. No PSTN account is provisioned automatically.',
+          },
+          sandboxes: {
+            location: 'Build → Sandboxes',
+            recovery:
+              'Staged sources survive restart; owned orphan containers are stopped, never resumed. Old credentials cannot adopt recovered sessions.',
+            environment:
+              'Install locked dependencies from the IDE with its explicit one-command network grant. MCP execution cannot enable network or prepare environments.',
+            steps: [
+              'create_session',
+              'start_command',
+              'session_status',
+              'review_changes',
+              'IDE review/apply',
+            ],
+          },
           diagnostics:
             'Inspect run status, events, traces, and metrics. Distinguish observed errors from hypotheses. Compare configurations and held-out metrics before recommending changes. Content-disabled logs cannot be recovered.',
         };
+      case 'knowledge.list':
+        return this.knowledge.list(args.query);
+      case 'drafts.get':
+        return this.drafts.get(args.key);
+      case 'bundles.files':
+        return this.bundles.files();
+      case 'documents.status':
+        return this.documents.status();
+      case 'documents.preview':
+        return this.documents.preview(args);
+      case 'documents.save':
+        return this.documents.save(args);
+      case 'bundles.preview':
+        return this.bundles.preview(args);
+      case 'bundles.export':
+        return this.bundles.export(args);
+      case 'bundles.inspect':
+        return this.bundles.inspect(args);
+      case 'bundles.import':
+        return this.bundles.import(args);
+      case 'drafts.save':
+        return this.drafts.save(args.key, args.data);
+      case 'workspace.search': {
+        if (typeof args.query !== 'string' || args.query.length > 200)
+          throw new Error('Search must be at most 200 characters');
+        const query = args.query.trim().toLowerCase();
+        if (!query) return [];
+        return [
+          ...this.store
+            .runs()
+            .filter((run) =>
+              `${run.name} ${run.id} ${run.status}`
+                .toLowerCase()
+                .includes(query),
+            )
+            .slice(0, 10)
+            .map((run) => ({
+              kind: 'run',
+              id: run.id,
+              title: `${run.name} · ${run.status}`,
+            })),
+          ...this.connections
+            .list()
+            .filter((connection) =>
+              `${connection.id} ${connection.model || ''}`
+                .toLowerCase()
+                .includes(query),
+            )
+            .slice(0, 10)
+            .map((connection) => ({
+              kind: 'model',
+              id: connection.id,
+              title: `${connection.id} ${connection.model || ''}`,
+            })),
+          ...this.knowledge
+            .list(args.query)
+            .slice(0, 10)
+            .map((note) => ({
+              kind: 'memory',
+              id: note.id,
+              title: note.title,
+            })),
+        ];
+      }
+      case 'knowledge.get':
+        return this.knowledge.get(args.id);
+      case 'knowledge.graph':
+        return this.knowledge.graph(args.id);
+      case 'knowledge.semanticStatus':
+        return this.knowledge.semanticStatus();
+      case 'knowledge.indexSemantic':
+        return this.knowledge.indexSemantic(args);
+      case 'knowledge.searchSemantic':
+        return this.knowledge.searchSemantic(args);
+      case 'knowledge.save':
+        return this.knowledge.save(args);
+      case 'knowledge.delete':
+        return this.knowledge.delete(args.id, args.revision);
+      case 'knowledge.compile':
+        return this.knowledge.compile(args);
+      case 'knowledge.import':
+        return this.knowledge.importSources(args);
+      case 'knowledge.refresh':
+        return this.knowledge.refresh(args);
+      case 'knowledge.proposals':
+        return this.knowledge.proposals();
+      case 'knowledge.applyProposal':
+        return this.knowledge.applyProposal(args);
+      case 'knowledge.discardProposal':
+        return this.knowledge.discardProposal(args.id);
+      case 'knowledge.history':
+        return this.knowledge.history(args.id);
+      case 'knowledge.restore':
+        return this.knowledge.restore(args);
+      case 'knowledge.maintenance':
+        return this.knowledge.maintenanceStatus();
+      case 'knowledge.configureMaintenance':
+        return this.knowledge.configureMaintenance(args);
+      case 'knowledge.scan':
+        return this.knowledge.scan();
+      case 'knowledge.cancel':
+        return this.knowledge.cancel();
+      case 'evidence.list':
+        return this.evidence.list();
+      case 'evidence.get':
+        return this.evidence.get(args.id);
+      case 'evidence.preview':
+        return this.evidence.preview(args);
+      case 'evidence.save':
+        return this.evidence.save(args);
+      case 'evidence.complete':
+        return this.evidence.complete(args);
+      case 'evidence.delete':
+        return this.evidence.delete(args);
+      case 'evidence.exportPreview':
+        return this.evidence.exportPreview(args);
+      case 'evidence.export':
+        return this.evidence.export(args);
+      case 'voice.profiles':
+        return this.voice.profiles();
+      case 'voice.status':
+        return this.voice.status();
+      case 'voice.save':
+        return this.voice.save(args);
+      case 'voice.start':
+        return this.voice.start(args);
+      case 'voice.token':
+        return this.voice.token(args);
+      case 'voice.localStart':
+        return this.voice.localStart(args);
+      case 'rl.status':
+        return this.rl.status();
+      case 'rl.environments':
+        return this.rl.environments();
+      case 'rl.previewEnvironment':
+        return this.rl.previewEnvironment(args);
+      case 'rl.registerEnvironment':
+        return this.rl.registerEnvironment(args);
+      case 'rl.checkEnvironment':
+        return this.rl.checkEnvironment(args);
+      case 'rl.isCustomPolicy':
+        return this.rl.isCustomPolicy(args.policy);
+      case 'rl.catalog':
+        return this.rl.catalog();
+      case 'rl.train':
+        return this.rl.train(args);
+      case 'rl.trainBuiltin':
+        return this.rl.train(args, false);
+      case 'rl.policies':
+        return this.rl.policies();
+      case 'rl.rollout':
+        return this.rl.rollout(args);
+      case 'rl.rolloutBuiltin':
+        return this.rl.rollout(args, false);
       case 'environment.setup': {
         for (const file of ['pyproject.toml', 'uv.lock'])
           if (!fs.existsSync(within(this.root, file, true)))
@@ -295,6 +629,32 @@ export class Workspace {
         return this.huggingface.generate(args);
       case 'hf.result':
         return this.huggingface.result(args.file);
+      case 'serving.list':
+        return this.servers.list();
+      case 'serving.start':
+        return this.servers.start(args);
+      case 'evals.files':
+        return this.evals.files();
+      case 'evals.sample':
+        return this.evals.sample();
+      case 'evals.list':
+        return this.evals.list();
+      case 'evals.run':
+        return this.evals.run(args);
+      case 'evals.get':
+        return this.evals.get(args.runId, args.offset, args.limit);
+      case 'evals.score':
+        return this.evals.score(args.runId, args);
+      case 'evals.snapshot':
+        return this.evals.snapshot(args.dataset);
+      case 'evals.datasets':
+        return this.evals.datasets();
+      case 'evals.exportCase':
+        return this.evals.exportCase(args);
+      case 'evals.exportTrace':
+        return this.evals.exportTrace(args);
+      case 'evals.gate':
+        return this.evals.gate(args);
       case 'ssh.list':
         return this.training.ssh.list();
       case 'ssh.save':
@@ -347,6 +707,7 @@ export class Workspace {
           dropped: this.store.dropped,
           storageBytes: this.store.bytes(),
           mcp: this.mcp.url,
+          privacy: privateStateStatus(this.root),
         };
       case 'project.get':
         return {
@@ -385,6 +746,10 @@ export class Workspace {
       case 'runs.start':
         return this.runs.start(args.name);
       case 'runs.cancel':
+        if (this.store.run(args.id)?.configuration?.assistant)
+          return this.assistant.cancel(args.id);
+        if (this.store.run(args.id)?.configuration?.evaluation)
+          return this.evals.cancel(args.id);
         return this.store.run(args.id)?.training
           ? this.training.cancel(args.id)
           : this.runs.cancel(args.id);
@@ -428,6 +793,10 @@ export class Workspace {
               temperature <= 2 && { temperature }),
             ...(maxTokens > 0 &&
               maxTokens <= 32768 && { max_tokens: maxTokens }),
+            // Same default as evaluations: IDE-served reasoning models answer without thinking.
+            ...(connection.id.startsWith('serve-') && {
+              chat_template_kwargs: { enable_thinking: false },
+            }),
           })
         ).json();
         return {
@@ -444,12 +813,29 @@ export class Workspace {
         );
       case 'assistant.status':
         return this.assistant.status(args.id);
+      case 'assistant.list':
+        return this.assistant.list();
+      case 'assistant.delete':
+        return this.assistant.delete(args.id);
       case 'assistant.cancel':
         return this.assistant.cancel(args.id);
       case 'sandbox.available':
         return this.sandbox.available();
       case 'sandbox.create':
         return this.sandbox.create();
+      case 'sandbox.capabilities':
+        return this.sandbox.capabilities();
+      case 'sandbox.configure':
+        return this.sandbox.configure(args);
+      case 'sandbox.sessions':
+        return {
+          sessions: this.sandbox.all(),
+          recoveryErrors: this.sandbox.recoveryErrors,
+        };
+      case 'sandbox.prepare':
+        return this.sandbox.prepareEnvironment(args.id);
+      case 'sandbox.start':
+        return this.sandbox.start(args.id, args.command);
       case 'sandbox.run':
         return this.sandbox.run(args.id, args.command, Boolean(args.network));
       case 'sandbox.status':
@@ -480,6 +866,16 @@ export class Workspace {
         return this.rag.preview(args.file, args.size, args.overlap);
       case 'rag.collections':
         return this.rag.collections(args.id);
+      case 'rag.sources':
+        return this.rag.sources(args.id, args.collection);
+      case 'rag.identity':
+        return this.rag.identity();
+      case 'rag.previewIdentityReset':
+        return this.rag.previewIdentityReset(args);
+      case 'rag.resetIdentity':
+        return this.rag.resetIdentity(args);
+      case 'rag.removeSource':
+        return this.rag.removeSource(args);
       case 'rag.documents':
         return this.rag.documents(args.id, args.collection, args.offset);
       case 'rag.ingest':
@@ -533,6 +929,8 @@ export class Workspace {
   }
   private async evaluateRag(args: Record<string, any>) {
     const file = within(this.root, args.dataset);
+    if (!fs.statSync(file).isFile())
+      throw new Error('Choose a regular evaluation dataset file');
     if (fs.statSync(file).size > 1024 * 1024)
       throw new Error('Evaluation dataset exceeds 1 MB');
     const cases = fs
@@ -557,12 +955,27 @@ export class Workspace {
       const results = [];
       for (const [index, entry] of cases.entries()) {
         const result = await this.rag.query(
-          { ...args, query: entry.input } as any,
+          {
+            vector: args.vector,
+            embedding: args.embedding,
+            model: args.model,
+            collection: args.collection,
+            query: entry.input,
+            filter: args.filter,
+            limit: args.limit,
+            mode: args.mode,
+            reranker: args.reranker,
+          },
           id,
         );
         const actual =
           result.answer ||
-          result.points.map((p: any) => p.payload?.text || '').join('\n');
+          result.points
+            .filter((p: any) =>
+              ['current', 'external'].includes(p.sourceStatus),
+            )
+            .map((p: any) => p.payload?.text || '')
+            .join('\n');
         const score =
           entry.match === 'exact'
             ? Number(actual === entry.expected)
@@ -640,6 +1053,10 @@ export class Workspace {
         model: configuration.model,
         size: configuration.size,
         overlap: configuration.overlap,
+        mode: configuration.mode,
+        reranker: configuration.reranker,
+        topK: configuration.topK,
+        limit: configuration.limit,
       },
     };
     this.store.saveRun(run);
@@ -648,7 +1065,11 @@ export class Workspace {
       this.store.saveRun({ ...run, status: 'completed', ended: Date.now() });
       return result;
     } catch (error) {
-      this.store.saveRun({ ...run, status: 'failed', ended: Date.now() });
+      this.store.saveRun({
+        ...run,
+        status: this.closed ? 'cancelled' : 'failed',
+        ended: Date.now(),
+      });
       throw error;
     }
   }
@@ -661,6 +1082,8 @@ export class Workspace {
         'sklearn',
         'finetune',
         'pytorch',
+        'rl',
+        'voice',
       ].includes(template) ||
       !/^[a-zA-Z0-9_-]{1,80}$/.test(name)
     )
@@ -678,6 +1101,18 @@ export class Workspace {
       path.join(target, 'aiide_sdk'),
       { recursive: true },
     );
+    if (template === 'rl')
+      fs.cpSync(
+        path.join(assets, 'python', 'aiide_rl'),
+        path.join(target, 'aiide_rl'),
+        { recursive: true },
+      );
+    if (template === 'voice')
+      fs.cpSync(
+        path.join(assets, 'python', 'aiide_voice'),
+        path.join(target, 'aiide_voice'),
+        { recursive: true },
+      );
     const config = loadProject(target);
     config.name = name;
     config.commands.setup = ['uv', 'sync', '--locked'];
@@ -686,7 +1121,7 @@ export class Workspace {
     return { root: target };
   }
   private async startQdrant() {
-    if (!(await this.sandbox.available()))
+    if (!(await this.sandbox.dockerAvailable()))
       throw new Error('Start Docker before starting local Qdrant');
     await this.sandbox.prepareImage('qdrant/qdrant:v1.16.2');
     const data = within(this.root, '.aiide/qdrant', true);
@@ -744,26 +1179,55 @@ export class Workspace {
       'Qdrant started but is not ready; inspect Docker logs and retry',
     );
   }
-  async close() {
-    if (this.closed) return;
+  close() {
+    if (this.closing) return this.closing;
     this.closed = true;
+    this.closing = this.finishClose();
+    return this.closing;
+  }
+  private async finishClose() {
+    const errors: unknown[] = [];
     try {
-      await this.training.close();
-      await this.assistant.stop();
-      await this.runs.stop();
-      await this.sandbox.stop();
-      await this.mcp.stop();
-      await this.telemetry.stop();
-      this.store.close();
+      for (const cleanup of [
+        () => this.knowledge.close(),
+        () => this.evidence.close(),
+        () => this.documents.close(),
+        () => this.bundles.close(),
+        () => this.evals.close(),
+        () => this.connections.close(),
+        () => this.training.close(),
+        () => this.assistant.stop(),
+        () => this.rl.close(),
+        () => this.runs.stop(),
+        () => this.voice.close(),
+        () => this.sandbox.stop(),
+        () => this.mcp.stop(),
+        () => this.telemetry.stop(),
+        () => Promise.allSettled([...this.pending]),
+        () => this.store.close(),
+      ]) {
+        try {
+          await cleanup();
+        } catch (error) {
+          errors.push(error);
+        }
+      }
     } finally {
       this.release?.();
     }
+    if (errors.length)
+      throw new AggregateError(
+        errors,
+        'Workspace closed with cleanup failures',
+      );
   }
 }
 
 export class EngineeringBackend {
   private workspaces = new Map<string, Promise<Workspace>>();
+  private closed = false;
   async request(request: RpcRequest) {
+    if (this.closed) throw new Error('Backend is closed');
     if (
       typeof request.workspace !== 'string' ||
       !path.isAbsolute(request.workspace)
@@ -778,14 +1242,22 @@ export class EngineeringBackend {
           throw error;
         }),
       );
-    return (await this.workspaces.get(root)!).operation(
-      request.operation,
-      request.args,
-    );
+    const workspace = await this.workspaces.get(root)!;
+    if (this.closed) throw new Error('Backend is closed');
+    return workspace.operation(request.operation, request.args);
   }
   async close() {
-    for (const promise of this.workspaces.values())
-      await (await promise).close();
+    this.closed = true;
+    const results = await Promise.allSettled(
+      [...this.workspaces.values()].map(async (promise) =>
+        (await promise).close(),
+      ),
+    );
     this.workspaces.clear();
+    const errors = results.flatMap((result) =>
+      result.status === 'rejected' ? [result.reason] : [],
+    );
+    if (errors.length)
+      throw new AggregateError(errors, 'Some workspace cleanup failed');
   }
 }
